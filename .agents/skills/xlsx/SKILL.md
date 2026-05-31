@@ -19,8 +19,6 @@ license: Proprietary. LICENSE.txt has complete terms
 - Never impose standardized formatting on files with established patterns
 - Existing template conventions ALWAYS override these guidelines
 
-## Financial models
-
 ### Color Coding Standards
 Unless otherwise stated by the user or existing template
 
@@ -31,8 +29,6 @@ Unless otherwise stated by the user or existing template
 - **Red text (RGB: 255,0,0)**: External links to other files
 - **Yellow background (RGB: 255,255,0)**: Key assumptions needing attention or cells that need to be updated
 
-### Number Formatting Standards
-
 #### Required Format Rules
 - **Years**: Format as text strings (e.g., "2024" not "2,024")
 - **Currency**: Use $#,##0 format; ALWAYS specify units in headers ("Revenue ($mm)")
@@ -40,8 +36,6 @@ Unless otherwise stated by the user or existing template
 - **Percentages**: Default to 0.0% format (one decimal)
 - **Multiples**: Format as 0.0x for valuation multiples (EV/EBITDA, P/E)
 - **Negative numbers**: Use parentheses (123) not minus -123
-
-### Formula Construction Rules
 
 #### Assumptions Placement
 - Place ALL assumptions (growth rates, margins, multiples, etc.) in separate assumption cells
