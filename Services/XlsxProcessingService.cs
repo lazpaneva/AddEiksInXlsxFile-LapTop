@@ -95,6 +95,16 @@ namespace AddEiksInXlsxFile.Services
 
             // Ensure header for EIK column
             if (newWs.Cell(1, targetCol).IsEmpty()) newWs.Cell(1, targetCol).Value = "EIK";
+            // Remove any background fills from the generated sheet (do not preserve source fills)
+            var usedRange = newWs.RangeUsed();
+            if (usedRange != null)
+            {
+                foreach (var cell in usedRange.Cells())
+                {
+                    cell.Style.Fill.PatternType = ClosedXML.Excel.XLFillPatternValues.None;
+                    cell.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.NoColor;
+                }
+            }
 
             // Save result with a new filename
             var resultName = MakeResultFileName(file2Name);

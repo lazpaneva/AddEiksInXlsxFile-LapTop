@@ -7,7 +7,6 @@ namespace AddEiksInXlsxFile.Controllers
     public class UploadController : Controller
     {
         private readonly XlsxService _xlsxService;
-<<<<<<< HEAD
         private readonly XlsxProcessingService _processingService;
         private readonly string[] _accepted = new[] { ".xlsx" };
 
@@ -15,13 +14,6 @@ namespace AddEiksInXlsxFile.Controllers
         {
             _xlsxService = xlsxService;
             _processingService = processingService;
-=======
-        private readonly string[] _accepted = new[] { ".xlsx" };
-
-        public UploadController(XlsxService xlsxService)
-        {
-            _xlsxService = xlsxService;
->>>>>>> ebd47c50230d90e69f13538d4207696a5ef7a317
         }
 
         [HttpGet]
@@ -57,7 +49,7 @@ namespace AddEiksInXlsxFile.Controllers
                     result.File1Name = await _xlsxService.SaveTempFileAsync(file1);
                 }
             }
-
+            
             if (file2 != null && file2.Length > 0)
             {
                 if (!IsAllowed(file2.FileName))
@@ -75,7 +67,6 @@ namespace AddEiksInXlsxFile.Controllers
                 return View();
             }
 
-<<<<<<< HEAD
             // If user clicked Start, run processing
             if (!string.IsNullOrEmpty(submitButton) && submitButton.Equals("Start", StringComparison.OrdinalIgnoreCase))
             {
@@ -96,12 +87,6 @@ namespace AddEiksInXlsxFile.Controllers
                 {
                     result.Message = "Both files must be uploaded before starting processing.";
                 }
-=======
-            // If user clicked Start, show a processing message (actual matching not implemented here)
-            if (!string.IsNullOrEmpty(submitButton) && submitButton.Equals("Start", StringComparison.OrdinalIgnoreCase))
-            {
-                result.Message = $"Processing started: File1 column={file1ColValue}, File2 column={file2ColValue}.";
->>>>>>> ebd47c50230d90e69f13538d4207696a5ef7a317
             }
 
             return View(result);

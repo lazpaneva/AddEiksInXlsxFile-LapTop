@@ -1,18 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
-<<<<<<< HEAD
     <TargetFramework>net10.0</TargetFramework>
-=======
-    <TargetFramework>net9.0</TargetFramework>
->>>>>>> ebd47c50230d90e69f13538d4207696a5ef7a317
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-<<<<<<< HEAD
     <PackageReference Include="ClosedXML" Version="0.105.0" />
-=======
-    <PackageReference Include="ClosedXML" Version="0.96.0" />
->>>>>>> ebd47c50230d90e69f13538d4207696a5ef7a317
   </ItemGroup>
 </Project>
