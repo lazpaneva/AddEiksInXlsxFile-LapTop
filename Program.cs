@@ -9,7 +9,10 @@ builder.Services.Configure<FormOptions>(options =>
     options.MultipartBodyLengthLimit = 50 * 1024 * 1024; // 50 MB
 });
 builder.Services.AddSingleton<XlsxService>();
+<<<<<<< HEAD
 builder.Services.AddSingleton<XlsxProcessingService>();
+=======
+>>>>>>> ebd47c50230d90e69f13538d4207696a5ef7a317
 
 var app = builder.Build();
 
