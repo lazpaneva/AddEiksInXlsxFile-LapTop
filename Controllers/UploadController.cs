@@ -24,9 +24,11 @@ namespace AddEiksInXlsxFile.Controllers
 
         [HttpPost]
         [RequestSizeLimit(50 * 1024 * 1024)]
-        public async Task<IActionResult> Index(IFormFile? file1, IFormFile? file2, int? file1Col = null, int? file2Col = null, string? submitButton = null)
+        public async Task<IActionResult> Index(IFormFile? file1, IFormFile? file2, int? file1Col = null, int? file2Col = null, string? submitButton = null, string? existingFile1 = null, string? existingFile2 = null)
         {
-            if ((file1 == null || file1.Length == 0) && (file2 == null || file2.Length == 0))
+            // Allow processing to start when files were previously uploaded and their names are posted back
+            if ((file1 == null || file1.Length == 0) && (file2 == null || file2.Length == 0)
+                && string.IsNullOrEmpty(existingFile1) && string.IsNullOrEmpty(existingFile2))
             {
                 ModelState.AddModelError(string.Empty, "Please select at least one XLSX file to upload.");
                 return View();
@@ -49,6 +51,11 @@ namespace AddEiksInXlsxFile.Controllers
                     result.File1Name = await _xlsxService.SaveTempFileAsync(file1);
                 }
             }
+            else if (!string.IsNullOrEmpty(existingFile1))
+            {
+                // Use previously uploaded file name if present
+                result.File1Name = existingFile1;
+            }
             
             if (file2 != null && file2.Length > 0)
             {
@@ -60,6 +67,11 @@ namespace AddEiksInXlsxFile.Controllers
                 {
                     result.File2Name = await _xlsxService.SaveTempFileAsync(file2);
                 }
+            }
+            else if (!string.IsNullOrEmpty(existingFile2))
+            {
+                // Use previously uploaded file name if present
+                result.File2Name = existingFile2;
             }
 
             if (!ModelState.IsValid)
@@ -96,8 +108,14 @@ namespace AddEiksInXlsxFile.Controllers
         public IActionResult Download(string file)
         {
             if (string.IsNullOrEmpty(file)) return BadRequest();
-            var path = _xlsxService.GetFilePath(file);
-            if (!System.IO.File.Exists(path)) return NotFound();
+                var path = _xlsxService.GetFilePath(file);
+                if (!System.IO.File.Exists(path))
+                {
+                    // Try to locate the file elsewhere in the project (e.g., saved in the same folder as file2)
+                    var matches = Directory.GetFiles(Directory.GetCurrentDirectory(), file, SearchOption.AllDirectories);
+                    path = matches.FirstOrDefault();
+                }
+                if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path)) return NotFound();
             var contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
             var fs = System.IO.File.OpenRead(path);
             return File(fs, contentType, file);

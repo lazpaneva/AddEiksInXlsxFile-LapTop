@@ -15,6 +15,7 @@
         <div class="form-text text-muted">@(Model?.File1Name ?? " ")</div>
         <span asp-validation-for="file1" class="text-danger"></span>
     </div>
+    <input type="hidden" name="existingFile1" value="@(Model?.File1Name ?? "")" />
 
     <div>
         <label for="file2" class="form-label">File 2 (to populate)</label>
@@ -22,6 +23,7 @@
         <div class="form-text text-muted">@(Model?.File2Name ?? " ")</div>
         <span asp-validation-for="file2" class="text-danger"></span>
     </div>
+    <input type="hidden" name="existingFile2" value="@(Model?.File2Name ?? "")" />
 
     <div class="centered">
         <button type="submit" name="submitButton" value="Upload" class="btn btn-secondary">Upload</button>

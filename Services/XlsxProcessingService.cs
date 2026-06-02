@@ -62,8 +62,19 @@ namespace AddEiksInXlsxFile.Services
                 dataRows.Add((norm, r));
             }
 
-            // Sort by normalized name ascending using current culture
-            dataRows.Sort((a, b) => StringComparer.Create(CultureInfo.CurrentCulture, true).Compare(a.Norm, b.Norm));
+            // Sort by normalized name ascending using ordinal ignore-case for determinism.
+            // Place empty/null normalized names after non-empty ones.
+            dataRows.Sort((a, b) =>
+            {
+                var an = a.Norm;
+                var bn = b.Norm;
+                var aEmpty = string.IsNullOrEmpty(an);
+                var bEmpty = string.IsNullOrEmpty(bn);
+                if (aEmpty && bEmpty) return 0;
+                if (aEmpty) return 1; // a after b
+                if (bEmpty) return -1; // a before b
+                return StringComparer.OrdinalIgnoreCase.Compare(an, bn);
+            });
 
             // Determine target column for EIK in output (file2CompanyCol + 1)
             int targetCol = file2CompanyCol + 1;
@@ -106,10 +117,94 @@ namespace AddEiksInXlsxFile.Services
                 }
             }
 
-            // Save result with a new filename
+            // Save result with a new filename. Strategy:
+            // 1) If caller provided a directory inside `file2Name`, try to use it.
+            // 2) If that is not usable, try the current user's Downloads folder.
+            // 3) Finally, fall back to the directory where file2 was read from (usually wwwroot/uploads).
             var resultName = MakeResultFileName(file2Name);
-            var resultPath = _xlsxService.GetFilePath(resultName);
+            string? chosenDir = null;
+
+            // Helper: test whether a directory can be created/written to
+            static bool CanUseDirectory(string dir)
+            {
+                try
+                {
+                    if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+                    // try to create a small temp file
+                    var testFile = Path.Combine(dir, Path.GetRandomFileName());
+                    using (var fs = System.IO.File.Create(testFile)) { }
+                    System.IO.File.Delete(testFile);
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+
+            try
+            {
+                var dirFromFile2Name = Path.GetDirectoryName(file2Name);
+                if (!string.IsNullOrEmpty(dirFromFile2Name))
+                {
+                    if (!Path.IsPathRooted(dirFromFile2Name))
+                    {
+                        dirFromFile2Name = Path.Combine(Directory.GetCurrentDirectory(), dirFromFile2Name);
+                    }
+                    if (CanUseDirectory(dirFromFile2Name))
+                    {
+                        chosenDir = dirFromFile2Name;
+                    }
+                }
+            }
+            catch
+            {
+                // ignore
+            }
+
+            // If we couldn't use directory from File2Name, try user's Downloads folder
+            if (string.IsNullOrEmpty(chosenDir))
+            {
+                try
+                {
+                    var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                    if (!string.IsNullOrEmpty(userProfile))
+                    {
+                        var downloads = Path.Combine(userProfile, "Downloads");
+                        if (CanUseDirectory(downloads)) chosenDir = downloads;
+                    }
+                }
+                catch
+                {
+                    // ignore
+                }
+            }
+
+            // Final fallback: directory where file2 was read from (uploads)
+            if (string.IsNullOrEmpty(chosenDir))
+            {
+                var fallback = Path.GetDirectoryName(file2Path);
+                if (string.IsNullOrEmpty(fallback)) fallback = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+                if (!Directory.Exists(fallback)) Directory.CreateDirectory(fallback);
+                chosenDir = fallback;
+            }
+
+            var resultPath = Path.Combine(chosenDir, resultName);
             newWb.SaveAs(resultPath);
+
+            // Append diagnostic log so tests/users can inspect which directories were tried/chosen
+            try
+            {
+                var uploadsDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+                if (!Directory.Exists(uploadsDir)) Directory.CreateDirectory(uploadsDir);
+                var logFile = Path.Combine(uploadsDir, "save-log.txt");
+                var log = $"{DateTime.UtcNow:O} | file2Name='{file2Name}' | file2Path='{file2Path}' | chosenDir='{chosenDir}' | resultPath='{resultPath}'\r\n";
+                System.IO.File.AppendAllText(logFile, log);
+            }
+            catch
+            {
+                // ignore logging failures
+            }
 
             return resultName;
         }
