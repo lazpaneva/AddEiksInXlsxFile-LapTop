@@ -94,6 +94,55 @@ The following rules should also be added: if there are identical company names w
 4. Reference actual file paths and class names from the implementation
 5. Validate YAML frontmatter if using any metadata
 
+## Authentication & Statistics (recommended additions)
+
+1. Add Identity & EF Core packages to the project:
+  - `Microsoft.AspNetCore.Identity.EntityFrameworkCore`
+  - `Microsoft.EntityFrameworkCore.SqlServer`
+  - `Microsoft.EntityFrameworkCore.Tools`
+
+2. Create an `ApplicationDbContext : IdentityDbContext<ApplicationUser>` that includes a `DbSet<ProcessingStatistics>`.
+
+3. Define `ProcessingStatistics` model with fields such as:
+  - `Id` (int, PK)
+  - `UserId` (string, nullable)
+  - `TimestampUtc` (DateTime)
+  - `InputFile1` (string)
+  - `InputFile2` (string)
+  - `OutputFilePath` (string)
+  - `TotalRows` (int)
+  - `MatchedCount` (int)
+  - `SuccessRate` (decimal)
+  - `ErrorMessage` (string, nullable)
+
+4. Register Identity and `ApplicationDbContext` in `Program.cs` with a connection string for SQL Server Express, for example:
+
+  `Server=.\SQLEXPRESS;Database=AddEiksDb;Trusted_Connection=True`
+
+5. Create and apply EF Core migrations:
+  - `dotnet ef migrations add InitialIdentity`
+  - `dotnet ef database update`
+
+6. Seed roles (`Admin`, `User`) and an initial admin account on startup. Use `IServiceProvider` scope in `Program.cs` to run seeding logic.
+
+7. Add authentication UI and controllers:
+  - `AccountController` with `Login`, `Logout` (and optional `Register`) actions and views.
+  - Protect upload/processing actions with `[Authorize]`. Restrict admin pages with `[Authorize(Roles = "Admin")]`.
+
+8. Integrate statistics recording:
+  - Inject a `StatisticsService` into the processing flow. After `ProcessAndSort` completes (or fails), create and save a `ProcessingStatistics` record with relevant fields and the current `User.Identity.Name` or `UserId`.
+  - Provide an admin page that lists and filters `ProcessingStatistics` entries.
+
+9. Operational recommendations:
+  - Store connection strings in `appsettings.Development.json` and production secrets in user secrets or environment variables.
+  - Use migrations and backups for schema changes.
+  - Consider retention policies for statistics (archive or delete old records periodically).
+
+10. Verification steps for auth + stats:
+  - Confirm Identity schema is created in SQL Server Express after migrations.
+  - Log in as an Admin and verify role-restricted pages are accessible.
+  - Run a processing job while authenticated and verify a `ProcessingStatistics` record is created and visible in the admin UI.
+
 ## Verification
 - File created at correct location (root or `.github/`)
 - All required sections present: Vision, Architecture, Data Flow, Stack, Conventions, Constraints, Build Commands

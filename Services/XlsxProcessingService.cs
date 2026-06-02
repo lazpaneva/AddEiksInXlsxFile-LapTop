@@ -13,7 +13,7 @@ namespace AddEiksInXlsxFile.Services
             _xlsxService = xlsxService;
         }
 
-        public string ProcessAndSort(string file1Name, string file2Name, int file1CompanyCol, int file2CompanyCol)
+        public ProcessResult ProcessAndSort(string file1Name, string file2Name, int file1CompanyCol, int file2CompanyCol)
         {
             var file1Path = _xlsxService.GetFilePath(file1Name);
             var file2Path = _xlsxService.GetFilePath(file2Name);
@@ -80,6 +80,7 @@ namespace AddEiksInXlsxFile.Services
             int targetCol = file2CompanyCol + 1;
 
             int outRow = 2;
+            int matchedCount = 0;
             foreach (var (norm, origRow) in dataRows)
             {
                 // Copy original row into new sheet
@@ -101,6 +102,7 @@ namespace AddEiksInXlsxFile.Services
 
                 // If there was no mapping, leave as "!!!!"
                 newWs.Cell(outRow, targetCol).Value = eikValue;
+                if (!string.IsNullOrEmpty(eikValue) && eikValue != "!!!!") matchedCount++;
                 outRow++;
             }
 
@@ -206,7 +208,14 @@ namespace AddEiksInXlsxFile.Services
                 // ignore logging failures
             }
 
-            return resultName;
+            return new ProcessResult
+            {
+                OutputFileName = resultName,
+                OutputFilePath = resultPath,
+                TotalRows = dataRows.Count,
+                MatchedCount = matchedCount,
+                ErrorMessage = null
+            };
         }
 
         private int DetectEikColumn(IXLWorksheet ws, int companyCol)

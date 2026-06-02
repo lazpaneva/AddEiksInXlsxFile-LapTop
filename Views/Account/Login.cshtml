@@ -1,0 +1,66 @@
+@model AddEiksInXlsxFile.Models.LoginViewModel
+
+@{
+    ViewData["Title"] = "Добавяне на колона с ЕИК в xlsx файл";
+}
+
+<div class="card shadow-sm" style="max-width:560px; margin:auto;">
+    <div class="card-body p-4">
+        <h2 class="card-title mb-3 text-center">Добавяне на колона с ЕИК в xlsx файл</h2>
+        <p class="text-center text-muted">Влезте с вашия email и парола</p>
+
+        <form asp-action="Login" method="post" novalidate>
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="ReturnUrl" />
+
+            <div asp-validation-summary="All" class="text-danger mb-2"></div>
+
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control form-control-lg" placeholder="you@company.com" required autocomplete="email" />
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Password" class="form-label"></label>
+                <input asp-for="Password" class="form-control form-control-lg" required autocomplete="current-password" />
+                <span asp-validation-for="Password" class="text-danger"></span>
+            </div>
+
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary btn-lg">Вход</button>
+            </div>
+
+            <div class="mt-3 text-center text-muted">
+                Нямате акаунт? <a href="/Account/Register">Създайте акаунт</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="text-center mt-4">
+    <a href="/">Върни се към началото</a>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function(){
+            const form = document.querySelector('form[asp-action="Login"]') || document.querySelector('form');
+            if (!form) return;
+            form.addEventListener('submit', function(e){
+                const email = form.querySelector('[name="Email"]');
+                const pwd = form.querySelector('[name="Password"]');
+                if (!email || !pwd) return;
+                if (!email.value || !pwd.value) {
+                    e.preventDefault();
+                    const summary = document.querySelector('[asp-validation-summary]') || document.querySelector('div[role="alert"]');
+                    const msg = 'Моля, въведете Email и Password.';
+                    if (summary) summary.textContent = msg;
+                    alert(msg);
+                    if (!email.value) email.focus(); else pwd.focus();
+                }
+            }, {capture:false});
+        })();
+    </script>
+}

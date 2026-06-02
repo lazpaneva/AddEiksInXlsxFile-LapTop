@@ -1,1 +1,3 @@
 2026-06-02T07:14:49.4266156Z | file2Name='new10.xlsx' | file2Path='C:\Users\PZuser\source\repos\AddEiksInXlsxFile-LapTop\wwwroot\uploads\new10.xlsx' | chosenDir='C:\Users\PZuser\Downloads' | resultPath='C:\Users\PZuser\Downloads\new10-result.xlsx'
+2026-06-02T08:47:59.3377283Z | file2Name='new10.xlsx' | file2Path='C:\Users\PZuser\source\repos\AddEiksInXlsxFile-LapTop\wwwroot\uploads\new10.xlsx' | chosenDir='C:\Users\PZuser\Downloads' | resultPath='C:\Users\PZuser\Downloads\new10-result.xlsx'
+2026-06-02T11:25:03.8815196Z | file2Name='new10.xlsx' | file2Path='C:\Users\PZuser\source\repos\AddEiksInXlsxFile-LapTop\wwwroot\uploads\new10.xlsx' | chosenDir='C:\Users\PZuser\Downloads' | resultPath='C:\Users\PZuser\Downloads\new10-result.xlsx'

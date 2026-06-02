@@ -4,25 +4,32 @@ using AddEiksInXlsxFile.Models;
 
 namespace AddEiksInXlsxFile.Controllers
 {
+    using Microsoft.AspNetCore.Authorization;
+
+    [Authorize]
     public class UploadController : Controller
     {
         private readonly XlsxService _xlsxService;
         private readonly XlsxProcessingService _processingService;
+        private readonly StatisticsService _statisticsService;
         private readonly string[] _accepted = new[] { ".xlsx" };
 
-        public UploadController(XlsxService xlsxService, XlsxProcessingService processingService)
+        public UploadController(XlsxService xlsxService, XlsxProcessingService processingService, StatisticsService statisticsService)
         {
             _xlsxService = xlsxService;
             _processingService = processingService;
+            _statisticsService = statisticsService;
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public IActionResult Index()
         {
             return View();
         }
 
         [HttpPost]
+        [AllowAnonymous]
         [RequestSizeLimit(50 * 1024 * 1024)]
         public async Task<IActionResult> Index(IFormFile? file1, IFormFile? file2, int? file1Col = null, int? file2Col = null, string? submitButton = null, string? existingFile1 = null, string? existingFile2 = null)
         {
@@ -86,9 +93,13 @@ namespace AddEiksInXlsxFile.Controllers
                 {
                     try
                     {
-                        var output = _processingService.ProcessAndSort(result.File1Name, result.File2Name, file1ColValue, file2ColValue);
-                        result.File2Name = output;
-                        result.Message = $"Processing complete. Download: {output}";
+                        var procResult = _processingService.ProcessAndSort(result.File1Name, result.File2Name, file1ColValue, file2ColValue);
+                        result.File2Name = procResult.OutputFileName;
+                        result.Message = $"Processing complete. Download: {procResult.OutputFileName}";
+
+                        // Record statistics (best-effort). Use User.Identity.Name as user id if available.
+                        var userId = User?.Identity?.Name;
+                        await _statisticsService.RecordAsync(procResult, userId, result.File1Name, result.File2Name);
                     }
                     catch (Exception ex)
                     {
