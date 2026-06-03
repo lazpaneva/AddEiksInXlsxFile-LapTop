@@ -30,6 +30,7 @@ namespace AddEiksInXlsxFile.Controllers
 
         [HttpPost]
         [AllowAnonymous]
+        [IgnoreAntiforgeryToken]
         [RequestSizeLimit(50 * 1024 * 1024)]
         public async Task<IActionResult> Index(IFormFile? file1, IFormFile? file2, int? file1Col = null, int? file2Col = null, string? submitButton = null, string? existingFile1 = null, string? existingFile2 = null)
         {
@@ -83,6 +84,12 @@ namespace AddEiksInXlsxFile.Controllers
 
             if (!ModelState.IsValid)
             {
+                // If this is an AJAX upload, return validation errors as JSON
+                if (Request.Headers.ContainsKey("X-Requested-With") && Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    var errors = ViewData.ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToArray();
+                    return Json(new { success = false, errors });
+                }
                 return View();
             }
 
@@ -109,6 +116,15 @@ namespace AddEiksInXlsxFile.Controllers
                 else
                 {
                     result.Message = "Both files must be uploaded before starting processing.";
+                }
+            }
+
+            // If user clicked Upload (AJAX), return filenames as JSON so client can update the form
+            if (!string.IsNullOrEmpty(submitButton) && submitButton.Equals("Upload", StringComparison.OrdinalIgnoreCase))
+            {
+                if (Request.Headers.ContainsKey("X-Requested-With") && Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { success = true, file1 = result.File1Name, file2 = result.File2Name });
                 }
             }
 

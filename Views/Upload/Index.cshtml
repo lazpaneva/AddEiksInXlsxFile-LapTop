@@ -3,77 +3,138 @@
     ViewData["Title"] = "Upload";
 }
 
-<div class="centered">
-    <h2>Upload XLSX Files</h2>
-    <p class="text-muted">Upload two XLSX files and specify which columns contain company names.</p>
+<style>
+    /* Space 15 points between every div within this view */
+    .app-main div { margin-bottom: 15pt; }
+</style>
+
+<div class="container py-4 app-main">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-9 col-lg-7">
+            <div class="mb-4">
+                <h2 class="page-title">Upload XLSX Files</h2>
+                <p class="page-subtitle">Upload two XLSX files and specify which columns contain company names.</p>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form asp-action="Index" method="post" enctype="multipart/form-data">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label for="file1" class="form-label">File 1 (contains EIKs)</label>
+                                <input class="form-control" type="file" id="file1" name="file1" accept=".xlsx" />
+                                <div class="form-text text-muted">@(Model?.File1Name ?? " ")</div>
+                                <span asp-validation-for="file1" class="text-danger"></span>
+                                <input type="hidden" name="existingFile1" value="@(Model?.File1Name ?? "")" />
+                            </div>
+
+                            <div class="col-12">
+                                <label for="file2" class="form-label">File 2 (to populate)</label>
+                                <input class="form-control" type="file" id="file2" name="file2" accept=".xlsx" />
+                                <div class="form-text text-muted">@(Model?.File2Name ?? " ")</div>
+                                <span asp-validation-for="file2" class="text-danger"></span>
+                                <input type="hidden" name="existingFile2" value="@(Model?.File2Name ?? "")" />
+                                <div class="mt-2">
+                                    <button type="button" id="uploadBtn" class="btn btn-outline-secondary">Upload</button>
+                                </div>
+                            </div>
+                            
+                            <div class="col-12 col-md-6">
+                                <label for="file1Col" class="form-label">Company column in File 1 (1-based)</label>
+                                <input class="form-control" type="number" id="file1Col" name="file1Col" value="@(Model?.File1CompanyColumn ?? 1)" min="1" />
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label for="file2Col" class="form-label">Company column in File 2 (1-based)</label>
+                                <input class="form-control" type="number" id="file2Col" name="file2Col" value="@(Model?.File2CompanyColumn ?? 1)" min="1" />
+                            </div>
+
+                            <div class="col-12 d-flex gap-2 justify-content-end form-actions">
+                                <button type="submit" name="submitButton" value="Start" class="btn btn-primary">Start</button>
+                            </div>
+                        </div>
+                    </form>
+                    <script>
+                        (function(){
+                            const uploadBtn = document.getElementById('uploadBtn');
+                            if (!uploadBtn) return;
+                            uploadBtn.addEventListener('click', async () => {
+                                const form = uploadBtn.closest('form');
+                                if (!form) return;
+                                const fd = new FormData(form);
+                                fd.append('submitButton','Upload');
+                                try {
+                                    const resp = await fetch(form.getAttribute('action') || window.location.pathname, {
+                                        method: 'POST',
+                                        body: fd,
+                                        credentials: 'same-origin',
+                                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                                    });
+                                    if (resp.ok) {
+                                        const data = await resp.json();
+                                        if (data.success) {
+                                            // update hidden inputs and visible text
+                                            const existing1 = form.querySelector('input[name="existingFile1"]');
+                                            const existing2 = form.querySelector('input[name="existingFile2"]');
+                                            if (existing1 && data.file1) existing1.value = data.file1;
+                                            if (existing2 && data.file2) existing2.value = data.file2;
+                                            // update form-text elements (they are the .form-text after file inputs)
+                                            const file1Text = form.querySelector('#file1 + .form-text');
+                                            const file2Text = form.querySelector('#file2 + .form-text');
+                                            if (file1Text && data.file1) file1Text.textContent = data.file1;
+                                            if (file2Text && data.file2) file2Text.textContent = data.file2;
+                                            alert('Upload successful. You can now click Start.');
+                                        } else {
+                                            const err = (data.errors || []).join('\n');
+                                            alert('Upload failed: ' + err);
+                                        }
+                                    } else {
+                                        const text = await resp.text();
+                                        console.error('Upload failed', resp.status, text);
+                                        alert('Upload failed: ' + resp.status + '\n' + text);
+                                    }
+                                } catch (e) {
+                                    alert('Upload error: ' + e);
+                                }
+                            });
+                        })();
+                    </script>
+                </div>
+            </div>
+
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div class="mt-3 alert alert-danger">
+                    <ul class="mb-0">
+                        @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                        {
+                            <li>@err.ErrorMessage</li>
+                        }
+                    </ul>
+                </div>
+            }
+
+            @if (Model != null)
+            {
+                <div class="mt-3">
+                    <h4 class="mb-2">Uploaded files</h4>
+                    <ul class="list-unstyled">
+                        @if (!string.IsNullOrEmpty(Model.File1Name))
+                        {
+                            <li>File 1: <a href="@Url.Action("Download", "Upload", new { file = Model.File1Name })">@Model.File1Name</a></li>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.File2Name))
+                        {
+                            <li>File 2: <a href="@Url.Action("Download", "Upload", new { file = Model.File2Name })">@Model.File2Name</a></li>
+                        }
+                    </ul>
+
+                    @if (!string.IsNullOrEmpty(Model.Message))
+                    {
+                        <div class="mt-3 alert alert-info">@Model.Message</div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
 </div>
-
-<form asp-action="Index" method="post" enctype="multipart/form-data" class="small-gap">
-    <div>
-        <label for="file1" class="form-label">File 1 (contains EIKs)</label>
-        <input class="form-control" type="file" id="file1" name="file1" accept=".xlsx" />
-        <div class="form-text text-muted">@(Model?.File1Name ?? " ")</div>
-        <span asp-validation-for="file1" class="text-danger"></span>
-    </div>
-    <input type="hidden" name="existingFile1" value="@(Model?.File1Name ?? "")" />
-
-    <div>
-        <label for="file2" class="form-label">File 2 (to populate)</label>
-        <input class="form-control" type="file" id="file2" name="file2" accept=".xlsx" />
-        <div class="form-text text-muted">@(Model?.File2Name ?? " ")</div>
-        <span asp-validation-for="file2" class="text-danger"></span>
-    </div>
-    <input type="hidden" name="existingFile2" value="@(Model?.File2Name ?? "")" />
-
-    <div class="centered">
-        <button type="submit" name="submitButton" value="Upload" class="btn btn-secondary">Upload</button>
-    </div>
-
-    <div>
-        <label for="file1Col" class="form-label">Company column in File 1 (1-based)</label>
-        <input class="form-control" type="number" id="file1Col" name="file1Col" value="@(Model?.File1CompanyColumn ?? 1)" min="1" />
-    </div>
-
-    <div>
-        <label for="file2Col" class="form-label">Company column in File 2 (1-based)</label>
-        <input class="form-control" type="number" id="file2Col" name="file2Col" value="@(Model?.File2CompanyColumn ?? 1)" min="1" />
-    </div>
-
-    <div class="centered">
-        <button type="submit" name="submitButton" value="Start" class="btn btn-start">Start</button>
-    </div>
-</form>
-
-@if (!ViewData.ModelState.IsValid)
-{
-    <div class="mt-3 alert alert-danger">
-        <ul>
-            @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
-            {
-                <li>@err.ErrorMessage</li>
-            }
-        </ul>
-    </div>
-}
-
-@if (Model != null)
-{
-    <div class="mt-3">
-        <h4 class="centered">Uploaded files</h4>
-        <ul class="list-unstyled centered">
-            @if (!string.IsNullOrEmpty(Model.File1Name))
-            {
-                <li>File 1: <a href="@Url.Action("Download", "Upload", new { file = Model.File1Name })">@Model.File1Name</a></li>
-            }
-            @if (!string.IsNullOrEmpty(Model.File2Name))
-            {
-                <li>File 2: <a href="@Url.Action("Download", "Upload", new { file = Model.File2Name })">@Model.File2Name</a></li>
-            }
-        </ul>
-
-        @if (!string.IsNullOrEmpty(Model.Message))
-        {
-            <div class="mt-3 alert alert-info centered">@Model.Message</div>
-        }
-    </div>
-}

@@ -3,10 +3,15 @@ using AddEiksInXlsxFile.Services;
 using AddEiksInXlsxFile.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllersWithViews();
+//builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.Add<AutoValidateAntiforgeryTokenAttribute>();
+});
 builder.Services.Configure<FormOptions>(options =>
 {
     options.MultipartBodyLengthLimit = 50 * 1024 * 1024; // 50 MB
@@ -14,21 +19,36 @@ builder.Services.Configure<FormOptions>(options =>
 builder.Services.AddSingleton<XlsxService>();
 builder.Services.AddSingleton<XlsxProcessingService>();
 // StatisticsService depends on ApplicationDbContext; register DbContext and Identity
-var connection = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Server=.\\SQLEXPRESS;Database=AddEiksDb;Trusted_Connection=True;MultipleActiveResultSets=true";
+var connection = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Server=localhost\\SQLEXPRESS;Database=AddEiksDb;Trusted_Connection=True;MultipleActiveResultSets=true";
 builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(connection));
-builder.Services.AddIdentity<IdentityUser, IdentityRole>(options => { options.SignIn.RequireConfirmedAccount = false; })
-    .AddEntityFrameworkStores<ApplicationDbContext>()
-    .AddDefaultTokenProviders();
+builder.Services.AddIdentity<IdentityUser, IdentityRole>(options => 
+{   options.SignIn.RequireConfirmedAccount = false; 
+    options.Password.RequireDigit = false;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequireUppercase = false;
+})
+    .AddEntityFrameworkStores<ApplicationDbContext>();
+    //.AddDefaultTokenProviders();
+
+
 // Configure cookie options explicitly to avoid SameSite/Secure issues in development
+
+// builder.Services.ConfigureApplicationCookie(options =>
+// {
+//     options.Cookie.Name = ".AspNetCore.Identity.Application";
+//     options.Cookie.HttpOnly = true;
+//     options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax;
+//     // During local development we may use HTTP; do not force Secure policy here.
+//     options.Cookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.SameAsRequest;
+//     options.LoginPath = "/Account/Login";
+// });
+
 builder.Services.ConfigureApplicationCookie(options =>
 {
-    options.Cookie.Name = ".AspNetCore.Identity.Application";
-    options.Cookie.HttpOnly = true;
-    options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax;
-    // During local development we may use HTTP; do not force Secure policy here.
-    options.Cookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.SameAsRequest;
-    options.LoginPath = "/Account/Login";
+    //options.LoginPath = "/Account/Login";
+    options.LoginPath = "/Upload/Index";
 });
+
 builder.Services.AddScoped<StatisticsService>();
 
 var app = builder.Build();
@@ -68,8 +88,9 @@ using (var scope = app.Services.CreateScope())
             }
         }
     }
-    catch
+    catch (Exception ex)
     {
+        throw new Exception("Seeding error: " + ex.Message, ex);
         // best-effort seeding; ignore failures (e.g., no DB present)
     }
 }
@@ -86,6 +107,7 @@ app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",
+    //pattern: "{controller=Account}/{action=Login}/{id?}");
     pattern: "{controller=Upload}/{action=Index}/{id?}");
 
 app.Run();
