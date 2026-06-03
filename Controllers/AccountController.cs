@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using AddEiksInXlsxFile.Models;
 
@@ -18,12 +19,14 @@ namespace AddEiksInXlsxFile.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public IActionResult Register()
         {
             return View();
         }
 
         [HttpPost]
+        [AllowAnonymous]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Register(Models.RegisterViewModel model)
         {
@@ -50,6 +53,7 @@ namespace AddEiksInXlsxFile.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public IActionResult Login(string? returnUrl = null)
         {
             var vm = new LoginViewModel { ReturnUrl = returnUrl };
@@ -57,6 +61,7 @@ namespace AddEiksInXlsxFile.Controllers
         }
 
         [HttpPost]
+        [AllowAnonymous]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model)
         {
@@ -69,30 +74,21 @@ namespace AddEiksInXlsxFile.Controllers
             var user = await _userManager.FindByEmailAsync(model.Email);
             if (user != null)
             {
-                var check = await _signInManager.CheckPasswordSignInAsync(user, model.Password, lockoutOnFailure: false);
-                if (check.Succeeded)
+                var result = await _signInManager.PasswordSignInAsync(user.UserName!, model.Password, model.RememberMe, lockoutOnFailure: false);
+                if (result.Succeeded)
                 {
                     _logger.LogInformation("Login succeeded for {Email}", model.Email);
-                    await _signInManager.SignInAsync(user, isPersistent: false);
-                    // Log Set-Cookie headers emitted by the authentication system for debugging
-                    if (Response?.Headers != null && Response.Headers.ContainsKey("Set-Cookie"))
+
+                    if (!string.IsNullOrWhiteSpace(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
                     {
-                        _logger.LogInformation("Response Set-Cookie after SignIn: {SetCookie}", Response.Headers["Set-Cookie"].ToString());
+                        return LocalRedirect(model.ReturnUrl);
                     }
 
-                    // Return a small HTML fallback page that forces a client-side redirect
-                    // and writes document.cookie to console so the user can confirm cookie presence.
-                    var redirectUrl = !string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl) ? model.ReturnUrl : Url.Action("Index", "Upload");
-                    var html = $"<!doctype html><html><head><meta charset=\"utf-8\"><title>Signing in...</title></head><body>"
-                             + "<p>Signing in... Redirecting to the application.</p>"
-                             + "<pre id=\"cookies\">Checking cookies...</pre>"
-                             + "<script>console.log('document.cookie=', document.cookie); document.getElementById('cookies').textContent = document.cookie || '<no cookies>'; setTimeout(function(){ window.location = '" + redirectUrl + "'; }, 500);</script>"
-                             + "</body></html>";
-                    return Content(html, "text/html");
+                    return RedirectToAction("Index", "Upload");
                 }
                 else
                 {
-                    _logger.LogWarning("Login failed for {Email}: invalid password", model.Email);
+                    _logger.LogWarning("Login failed for {Email}: {Result}", model.Email, result.ToString());
                 }
             }
             else

@@ -4,6 +4,7 @@ using AddEiksInXlsxFile.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,11 +46,18 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
-    //options.LoginPath = "/Account/Login";
-    options.LoginPath = "/Upload/Index";
+    options.Cookie.Name = ".AddEiksInXlsxFile.Auth";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.LoginPath = "/Account/Login";
+    options.LogoutPath = "/Account/Logout";
+    options.AccessDeniedPath = "/Account/Login";
+    options.SlidingExpiration = true;
 });
 
 builder.Services.AddScoped<StatisticsService>();
+builder.Services.AddSingleton<SearchService>();
 
 var app = builder.Build();
 
@@ -62,8 +70,11 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var services = scope.ServiceProvider;
+        var db = services.GetRequiredService<ApplicationDbContext>();
         var roleMgr = services.GetRequiredService<RoleManager<IdentityRole>>();
         var userMgr = services.GetRequiredService<UserManager<IdentityUser>>();
+
+        db.Database.Migrate();
 
         var roles = new[] { "Admin", "User" };
         foreach (var r in roles)

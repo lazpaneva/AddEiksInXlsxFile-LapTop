@@ -24,7 +24,7 @@
                                 <label for="file1" class="form-label">File 1 (contains EIKs)</label>
                                 <input class="form-control" type="file" id="file1" name="file1" accept=".xlsx" />
                                 <div class="form-text text-muted">@(Model?.File1Name ?? " ")</div>
-                                <span asp-validation-for="file1" class="text-danger"></span>
+                                <span class="text-danger field-validation-valid" data-valmsg-for="file1" data-valmsg-replace="true"></span>
                                 <input type="hidden" name="existingFile1" value="@(Model?.File1Name ?? "")" />
                             </div>
 
@@ -32,7 +32,7 @@
                                 <label for="file2" class="form-label">File 2 (to populate)</label>
                                 <input class="form-control" type="file" id="file2" name="file2" accept=".xlsx" />
                                 <div class="form-text text-muted">@(Model?.File2Name ?? " ")</div>
-                                <span asp-validation-for="file2" class="text-danger"></span>
+                                <span class="text-danger field-validation-valid" data-valmsg-for="file2" data-valmsg-replace="true"></span>
                                 <input type="hidden" name="existingFile2" value="@(Model?.File2Name ?? "")" />
                                 <div class="mt-2">
                                     <button type="button" id="uploadBtn" class="btn btn-outline-secondary">Upload</button>
@@ -83,7 +83,7 @@
                                             const file2Text = form.querySelector('#file2 + .form-text');
                                             if (file1Text && data.file1) file1Text.textContent = data.file1;
                                             if (file2Text && data.file2) file2Text.textContent = data.file2;
-                                            alert('Upload successful. You can now click Start.');
+                                            alert('Upload successful. You can input number of columns and click Start.');
                                         } else {
                                             const err = (data.errors || []).join('\n');
                                             alert('Upload failed: ' + err);

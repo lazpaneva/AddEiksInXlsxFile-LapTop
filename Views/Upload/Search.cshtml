@@ -1,0 +1,77 @@
+@model AddEiksInXlsxFile.Models.SearchViewModel
+@using System.Web
+@{
+    ViewData["Title"] = "Search";
+}
+
+<div class="card">
+    <div class="card-body">
+        <h4>Search and Edit EIKs</h4>
+        @if (string.IsNullOrEmpty(Model?.SourceFile))
+        {
+            <div class="alert alert-info">No result file found. Run processing first.</div>
+        }
+        else
+        {
+            <form id="searchForm">
+                <input type="hidden" name="sourceFile" value="@Model.SourceFile" />
+                <table class="table table-sm">
+                    <thead>
+                        <tr><th>Company</th><th>EIK</th></tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < Model.Rows.Count; i++)
+                        {
+                            var row = Model.Rows[i];
+                            var url = "https://web.apis.bg/srch.php?frt=1&tkn=" + HttpUtility.UrlEncode(row.CompanyName) + "&srfl=387&crypt=0&dt=38&d=4_4,&di=4&dispid=4&sr=%D0%B0%D0%BF%D0%B8%D1%81+%D0%B5%D0%B2%D1%80%D0%BE%D0%BF%D0%B0&rfil=0&tabs=56&start=0&end=0&cs=&spid=0&soid=0&scid=0&fcb=0&dist=0&fil=2&vsst=0";
+                        <tr>
+                            <td><a target="_blank" href="@url">@row.CompanyName</a></td>
+                            <td>
+                                <input type="text" name="edits[@row.Normalized]" value="@row.Eik" class="form-control form-control-sm" />
+                            </td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="button" id="saveBtn" class="btn btn-primary">Save to Downloads</button>
+                </div>
+            </form>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('saveBtn')?.addEventListener('click', async function () {
+            const form = document.getElementById('searchForm');
+            if (!form) return;
+            const fd = new FormData(form);
+            const obj = {};
+            for (const [k, v] of fd.entries()) {
+                if (k === 'sourceFile') continue;
+                // keys are like edits[normalized]
+                const m = k.match(/^edits\[(.*)\]$/);
+                if (m) {
+                    obj[m[1]] = v;
+                }
+            }
+            const sourceFile = fd.get('sourceFile');
+            try {
+                const resp = await fetch('/Upload/SearchSave', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sourceFile, edits: obj })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    alert('Saved to: ' + data.filename + '\nPath: ' + data.path);
+                } else {
+                    alert('Save failed');
+                }
+            } catch (e) {
+                alert('Error: ' + e);
+            }
+        });
+    </script>
+}
