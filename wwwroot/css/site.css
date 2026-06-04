@@ -76,3 +76,34 @@ body {
 .alert ul { margin: 0; padding-left: 1.25rem; }
 
 /* End of ui-polisher additions */
+
+/* Ensure header and footer text flow horizontally */
+footer .container, .navbar .container-fluid {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* Keep navbar links inline on small screens when possible */
+.navbar-nav {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: .5rem;
+}
+
+/* Center primary nav items and increase spacing */
+.nav-center {
+  margin: 0 auto;
+  gap: 1.5rem !important;
+  display: flex !important;
+  align-items: center;
+}
+
+/* Ensure right-side items have spacing */
+.navbar-nav.ms-auto {
+  gap: 1rem;
+  align-items: center;
+}

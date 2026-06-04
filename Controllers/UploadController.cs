@@ -148,76 +148,7 @@ namespace AddEiksInXlsxFile.Controllers
             return File(fs, contentType, file);
         }
 
-        [HttpGet]
-        public IActionResult Search()
-        {
-            // locate latest result file (by name pattern) in uploads
-            var uploads = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-            if (!Directory.Exists(uploads)) Directory.CreateDirectory(uploads);
-            var files = Directory.GetFiles(uploads, "*-result.xlsx").OrderByDescending(System.IO.File.GetLastWriteTime).ToArray();
-            if (files.Length == 0) return View(new Models.SearchViewModel());
-            var path = files[0];
-
-            var wb = new ClosedXML.Excel.XLWorkbook(path);
-            var ws = wb.Worksheets.First();
-
-            int lastRow = ws.LastRowUsed()?.RowNumber() ?? 0;
-            int lastCol = ws.LastColumnUsed()?.ColumnNumber() ?? 2;
-            var rows = new List<Models.SearchRow>();
-            for (int r = 2; r <= lastRow; r++)
-            {
-                var name = ws.Cell(r, 1).GetString();
-                var eik = ws.Cell(r, 2).GetString();
-                var norm = StringNormalizationService.NormalizeCompanyName(name) ?? string.Empty;
-                rows.Add(new Models.SearchRow { RowNumber = r, CompanyName = name, Eik = eik, Normalized = norm });
-            }
-
-            // sort by second column (EIK) ascending
-            rows = rows.OrderBy(x => x.Eik, StringComparer.OrdinalIgnoreCase).ToList();
-
-            var vm = new Models.SearchViewModel { SourceFile = Path.GetFileName(path), Rows = rows };
-            return View(vm);
-        }
-
-        [HttpPost]
-        public IActionResult SearchSave(string sourceFile, Dictionary<string, string>? edits)
-        {
-            if (edits != null)
-            {
-                foreach (var kv in edits)
-                {
-                    _searchService.SetEdit(kv.Key, kv.Value);
-                }
-            }
-
-            // apply edits to source file and save to Downloads
-            var uploads = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-            var sourcePath = Path.Combine(uploads, sourceFile ?? string.Empty);
-            if (!System.IO.File.Exists(sourcePath)) return NotFound();
-
-            var wb = new ClosedXML.Excel.XLWorkbook(sourcePath);
-            var ws = wb.Worksheets.First();
-            int lastRow = ws.LastRowUsed()?.RowNumber() ?? 0;
-            for (int r = 2; r <= lastRow; r++)
-            {
-                var name = ws.Cell(r, 1).GetString();
-                var norm = StringNormalizationService.NormalizeCompanyName(name) ?? string.Empty;
-                if (_searchService.TryGetEdit(norm, out var newEik))
-                {
-                    ws.Cell(r, 2).Value = newEik;
-                }
-            }
-
-            // save to Downloads
-            var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            var downloads = Path.Combine(userProfile ?? Directory.GetCurrentDirectory(), "Downloads");
-            if (!Directory.Exists(downloads)) Directory.CreateDirectory(downloads);
-            var outName = Path.GetFileNameWithoutExtension(sourceFile) + "-search-saved" + Path.GetExtension(sourceFile);
-            var outPath = Path.Combine(downloads, outName);
-            wb.SaveAs(outPath);
-
-            return Json(new { success = true, path = outPath, filename = outName });
-        }
+        
 
         private bool IsAllowed(string fileName)
         {

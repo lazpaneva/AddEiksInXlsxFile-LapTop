@@ -8,6 +8,9 @@ namespace AddEiksInXlsxFile.Models
         public string CompanyName { get; set; } = string.Empty;
         public string Eik { get; set; } = string.Empty;
         public string Normalized { get; set; } = string.Empty;
+        public string FullRowText { get; set; } = string.Empty;
+        public string TruncatedText { get; set; } = string.Empty;
+        public string InputEik { get; set; } = string.Empty;
     }
 
     public class SearchViewModel
