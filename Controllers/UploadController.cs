@@ -29,6 +29,12 @@ namespace AddEiksInXlsxFile.Controllers
             return View();
         }
 
+        [HttpGet]
+        public IActionResult Search()
+        {
+            return RedirectToAction("Index", "Search");
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         [RequestSizeLimit(50 * 1024 * 1024)]

@@ -1,0 +1,80 @@
+---
+description: Checklist for adding or changing MVC controllers and views in AddEiksInXlsxFile
+globs: Controllers/**/*.cs,Views/**/*.cshtml
+alwaysApply: false
+---
+
+# Check MVC Pages
+
+Before finishing work on a controller action or Razor view, verify every item below.
+
+## Controller
+
+- Derive from `Controller`; keep HTTP orchestration here, business logic in `Services/`.
+- Return strongly typed view models from `Models/`, not EF entities or service internals.
+- Mark GET actions with `[HttpGet]`; POST actions with `[HttpPost]` and `[ValidateAntiForgeryToken]` (global filter also applies).
+- Protect app pages with `[Authorize]` on the controller; use `[AllowAnonymous]` only for login/register.
+- On validation failure, return `View(model)` with `ModelState` errors — do not redirect.
+- Inject services via constructor; avoid `new` for processing, XLSX, or statistics services.
+- Record processing outcomes via `StatisticsService.RecordAsync` when adding new processing flows.
+
+```csharp
+// ✅ GOOD — thin action, service does work, stats recorded
+[HttpPost]
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> Index(UploadResult model)
+{
+    if (!ModelState.IsValid) return View(model);
+    var result = _processingService.ProcessAndSort(...);
+    await _statisticsService.RecordAsync(result, User?.Identity?.Name, ...);
+    return View(result);
+}
+```
+
+## View
+
+- Add `@model` pointing to a view model in `AddEiksInXlsxFile.Models`.
+- Set `ViewData["Title"]` for the page title.
+- Use Tag Helpers (`asp-action`, `asp-for`) and Bootstrap classes consistent with existing pages.
+- Include `@Html.AntiForgeryToken()` in forms that POST via JavaScript/AJAX.
+- Keep display logic in the view; move matching, parsing, and EIK rules to services.
+
+## Empty page / no data (визуализация на празна страница)
+
+Страницата **не трябва** да изглежда празна (бял екран без заглавие, текст или форма). Винаги показвай skeleton-а на страницата; скривай само блока с данни.
+
+**Controller — винаги връщай инициализиран view model:**
+
+```csharp
+// ✅ GOOD — празен, но валиден модел
+return View(new SearchViewModel { Rows = new List<SearchRow>() });
+
+// ❌ BAD — view с @model може да счупи или да остане без съдържание
+return View();
+```
+
+**View — задължителни проверки преди `@foreach`:**
+
+- Заглавие (`h2`/`h4`) и `ViewData["Title"]` се рендират **винаги**, дори без данни.
+- При липса на файл, празен списък или `null` model → покажи `alert alert-info` с ясно съобщение и следваща стъпка (виж `Views/Search/Index.cshtml`).
+- Формата за въвеждане (Upload, Login) остава видима на първи GET — не я скривай зад `@if (Model != null)`.
+- JavaScript, който target-ва елементи от data блока, използва `?.` или проверка за `null` (бутонът „Запази“ липсва при празен Search).
+
+**Ръчна проверка преди merge:**
+
+1. Отвори страницата на чист GET (без предишна сесия/файлове).
+2. Потвърди: navbar + заглавие + поне едно информативно съобщение или форма.
+3. Потвърди: няма JS грешки в конзолата при липса на таблица/форма за запис.
+
+## Wiring (easy to miss)
+
+- Create or update `Views/{Controller}/{Action}.cshtml` matching the action name.
+- Add nav links in `Views/Shared/_Layout.cshtml` when the page should be reachable from the menu.
+- Confirm default routing in `Program.cs` resolves the URL (`{controller=Upload}/{action=Index}`).
+- For file uploads: `enctype="multipart/form-data"`, `.xlsx` validation, and size limits already configured in `Program.cs`.
+
+## Do not
+
+- Put ClosedXML or matching logic directly in Razor or controllers.
+- Skip authorization on upload, search, or download endpoints.
+- Return raw entities or anonymous objects to views when a view model exists.

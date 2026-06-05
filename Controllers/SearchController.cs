@@ -61,50 +61,57 @@ namespace AddEiksInXlsxFile.Controllers
 
             if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path))
             {
+                ViewData["File2Col"] = file2Col ?? 1;
                 return View(new SearchViewModel());
             }
 
-            var wb = new ClosedXML.Excel.XLWorkbook(path);
-            var ws = wb.Worksheets.First();
-
-            int lastRow = ws.LastRowUsed()?.RowNumber() ?? 0;
-            int lastCol = ws.LastColumnUsed()?.ColumnNumber() ?? 2;
-            var rows = new List<SearchRow>();
-
-            int companyCol = (file2Col ?? 1);
-            int eikCol = companyCol + 1;
-
-            for (int r = 2; r <= lastRow; r++)
-            {
-                var name = ws.Cell(r, companyCol).GetString();
-                var eik = ws.Cell(r, eikCol).GetString();
-                if (!string.Equals(eik, "!!!!", StringComparison.Ordinal)) continue;
-
-                // build full row text
-                var parts = new List<string>();
-                for (int c = 1; c <= lastCol; c++)
-                {
-                    parts.Add(ws.Cell(r, c).GetString());
-                }
-                var full = string.Join(" | ", parts).Trim();
-                var truncated = full.Length > 35 ? full.Substring(0, 35) : full;
-
-                var norm = StringNormalizationService.NormalizeCompanyName(name) ?? string.Empty;
-                rows.Add(new SearchRow
-                {
-                    RowNumber = r,
-                    CompanyName = name,
-                    Eik = eik,
-                    Normalized = norm,
-                    FullRowText = full,
-                    TruncatedText = truncated,
-                    InputEik = string.Empty
-                });
-            }
-
-            var vm = new SearchViewModel { SourceFile = Path.GetFileName(path), Rows = rows };
+            int companyCol = file2Col ?? 1;
             ViewData["File2Col"] = companyCol;
-            return View(vm);
+
+            try
+            {
+                using var wb = new ClosedXML.Excel.XLWorkbook(path);
+                var ws = wb.Worksheets.First();
+
+                int lastRow = ws.LastRowUsed()?.RowNumber() ?? 0;
+                int lastCol = ws.LastColumnUsed()?.ColumnNumber() ?? 2;
+                var rows = new List<SearchRow>();
+                int eikCol = companyCol + 1;
+
+                for (int r = 2; r <= lastRow; r++)
+                {
+                    var name = ws.Cell(r, companyCol).GetString();
+                    var eik = ws.Cell(r, eikCol).GetString();
+                    if (!string.Equals(eik, "!!!!", StringComparison.Ordinal)) continue;
+
+                    var parts = new List<string>();
+                    for (int c = 1; c <= lastCol; c++)
+                    {
+                        parts.Add(ws.Cell(r, c).GetString());
+                    }
+                    var full = string.Join(" | ", parts).Trim();
+                    var truncated = full.Length > 35 ? full.Substring(0, 35) : full;
+
+                    var norm = StringNormalizationService.NormalizeCompanyName(name) ?? string.Empty;
+                    rows.Add(new SearchRow
+                    {
+                        RowNumber = r,
+                        CompanyName = name,
+                        Eik = eik,
+                        Normalized = norm,
+                        FullRowText = full,
+                        TruncatedText = truncated,
+                        InputEik = string.Empty
+                    });
+                }
+
+                return View(new SearchViewModel { SourceFile = Path.GetFileName(path), Rows = rows });
+            }
+            catch (Exception ex)
+            {
+                ViewData["Error"] = $"Неуспешно четене на файла „{Path.GetFileName(path)}“: {ex.Message}";
+                return View(new SearchViewModel());
+            }
         }
 
         [HttpPost]

@@ -7,10 +7,24 @@
 
 <div class="card">
     <div class="card-body">
-        <h4>Search — rows with missing EIK ("!!!!")</h4>
-        @if (string.IsNullOrEmpty(Model?.SourceFile) || Model.Rows.Count == 0)
+        <h4>Search — редове с липсващ ЕИК (&quot;!!!!&quot;)</h4>
+
+        @if (ViewData["Error"] is string errorMessage)
         {
-            <div class="alert alert-info">No result file found or no rows with &quot;!!!!&quot;. Run processing first.</div>
+            <div class="alert alert-danger">@errorMessage</div>
+        }
+        else if (string.IsNullOrEmpty(Model?.SourceFile))
+        {
+            <div class="alert alert-info">
+                Няма намерен резултатен файл (*-result.xlsx). Първо качете и обработете файлове от страница
+                <a href="/Upload">Upload</a>.
+            </div>
+        }
+        else if (Model.Rows == null || Model.Rows.Count == 0)
+        {
+            <div class="alert alert-success">
+                Файл <strong>@Model.SourceFile</strong> — всички редове имат попълнени ЕИК. Няма редове с „!!!!“.
+            </div>
         }
         else
         {
