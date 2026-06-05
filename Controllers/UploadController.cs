@@ -113,6 +113,9 @@ namespace AddEiksInXlsxFile.Controllers
                         // Record statistics (best-effort). Use User.Identity.Name as user id if available.
                         var userId = User?.Identity?.Name;
                         await _statisticsService.RecordAsync(procResult, userId, result.File1Name, result.File2Name);
+
+                        // After successful processing, redirect to Search page and pass sourceFile and file2Col so SearchController can use them
+                        return RedirectToAction("Index", "Search", new { sourceFile = procResult.OutputFileName, file2Col = file2ColValue });
                     }
                     catch (Exception ex)
                     {
