@@ -20,7 +20,7 @@ builder.Services.Configure<FormOptions>(options =>
 builder.Services.AddSingleton<XlsxService>();
 builder.Services.AddSingleton<XlsxProcessingService>();
 // StatisticsService depends on ApplicationDbContext; register DbContext and Identity
-var connection = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Server=localhost\\SQLEXPRESS;Database=AddEiksDb;Trusted_Connection=True;MultipleActiveResultSets=true";
+var connection = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Server=localhost\\SQLEXPRESS;Database=AddEiksDb;Trusted_Connection=True";
 builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(connection));
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options => 
 {   options.SignIn.RequireConfirmedAccount = false; 

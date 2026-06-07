@@ -116,9 +116,13 @@ namespace AddEiksInXlsxFile.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveOperatorEdits(string sourceFile, int? file2Col, Dictionary<string, string>? edits)
+        public async Task<IActionResult> SaveOperatorEdits([FromBody] SaveOperatorEditsRequest request)
         {
             var errors = new List<string>();
+            var sourceFile = request.SourceFile;
+            var file2Col = request.File2Col;
+            var edits = request.Edits;
+
             if (string.IsNullOrEmpty(sourceFile)) return BadRequest();
 
             // locate source
@@ -199,5 +203,12 @@ namespace AddEiksInXlsxFile.Controllers
 
             return Json(new { success = true, filename = outName, path = outPath, errors });
         }
+    }
+
+    public class SaveOperatorEditsRequest
+    {
+        public string SourceFile { get; set; } = string.Empty;
+        public int? File2Col { get; set; }
+        public Dictionary<string, string>? Edits { get; set; }
     }
 }

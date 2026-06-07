@@ -87,16 +87,27 @@ footer .container, .navbar .container-fluid {
   flex-wrap: wrap;
 }
 
+.navbar .container-fluid {
+  flex-wrap: nowrap;
+}
+
+.navbar-collapse {
+  flex-grow: 1;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
 /* Keep navbar links inline on small screens when possible */
 .navbar-nav {
   display: flex !important;
   flex-direction: row !important;
   gap: .5rem;
+  flex-wrap: nowrap;
 }
 
 /* Center primary nav items and increase spacing */
 .nav-center {
-  margin: 0 auto;
+  margin: 0 1rem 0 auto;
   gap: 1.5rem !important;
   display: flex !important;
   align-items: center;
@@ -106,4 +117,18 @@ footer .container, .navbar .container-fluid {
 .navbar-nav.ms-auto {
   gap: 1rem;
   align-items: center;
+  margin-left: 0 !important;
+  white-space: nowrap;
+}
+
+.navbar .nav-item,
+.navbar form {
+  white-space: nowrap;
+  margin-bottom: 0;
+}
+
+.navbar .btn-link {
+  text-decoration: none;
+  color: #8b5e3c;
+  padding: .5rem;
 }

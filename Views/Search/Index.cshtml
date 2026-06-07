@@ -7,7 +7,7 @@
 
 <div class="card">
     <div class="card-body">
-        <h4>Search — редове с липсващ ЕИК (&quot;!!!!&quot;)</h4>
+        <h4>Search - редове с липсващ ЕИК (&quot;!!!!&quot;)</h4>
 
         @if (ViewData["Error"] is string errorMessage)
         {
@@ -23,7 +23,7 @@
         else if (Model.Rows == null || Model.Rows.Count == 0)
         {
             <div class="alert alert-success">
-                Файл <strong>@Model.SourceFile</strong> — всички редове имат попълнени ЕИК. Няма редове с „!!!!“.
+                Файл <strong>@Model.SourceFile</strong> - всички редове имат попълнени ЕИК. Няма редове с "!!!!".
             </div>
         }
         else
@@ -34,48 +34,43 @@
                 <input type="hidden" name="file2Col" value="@file2Col" />
 
                 <div style="overflow-y:auto; max-height: calc(100vh - 160px);">
-                    <table class="table table-sm table-bordered">
+                    <table class="table table-sm table-bordered align-middle">
                         <thead class="table-light">
                             <tr>
                                 <th style="width:35%">Име на фирмата</th>
-                                <th style="width:20%">ЕИК</th>
+                                <th style="width:20%">ЕИК - попълни</th>
                                 <th>Пълен ред (първи 35 символа)</th>
-                                <th style="width:12%">Попълване</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var row in Model.Rows)
                             {
-                                var url = "https://web.apis.bg/srch.php?frt=1&tkn=" + Uri.EscapeDataString("\"" + row.CompanyName + "\"") + "&srfl=387&crypt=0&dt=38&d=4_4,&di=4&dispid=4&sr=%7Bquote%7D%D0%B0%D0%BF%D0%B8%D1%81+%D0%B5%D0%B2%D1%80%D0%BE%D0%BF%D0%B0%7Bquote%7D&rfil=0&tabs=56&start=0&end=0&cs=&spid=0&soid=0&scid=0&fcb=0&dist=0&fil=2&vsst=0";
-                                <tr>
-                                    <td><a target="_blank" href="@url">@row.CompanyName</a></td>
-                                    <td><a target="_blank" href="@url">@row.Eik</a></td>
-                                    <td>
-                                        @row.TruncatedText
-                                        @if ((row.FullRowText?.Length ?? 0) > 40)
-                                        {
-                                            <button type="button" class="btn btn-sm btn-link" data-bs-toggle="modal" data-bs-target="#modal-@row.RowNumber">Подробно</button>
+                                var searchTerm = Uri.EscapeDataString("\"" + row.CompanyName + "\"");
+                                var url = "https://web.apis.bg/srch.php?dt=38&sr=" + searchTerm;
+                                var detailsId = $"row-details-{row.RowNumber}";
 
-                                            <div class="modal fade" id="modal-@row.RowNumber" tabindex="-1" aria-labelledby="modalLabel-@row.RowNumber" aria-hidden="true">
-                                                <div class="modal-dialog modal-lg">
-                                                    <div class="modal-content">
-                                                        <div class="modal-header">
-                                                            <h5 class="modal-title" id="modalLabel-@row.RowNumber">Пълен текст - @row.CompanyName</h5>
-                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                        </div>
-                                                        <div class="modal-body">
-                                                            <pre style="white-space:pre-wrap;">@row.FullRowText</pre>
-                                                        </div>
-                                                        <div class="modal-footer">
-                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Затвори</button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        }
+                                <tr>
+                                    <td><a target="_blank" rel="noopener" href="@url">@row.CompanyName</a></td>
+                                    <td>
+                                        <input type="text"
+                                               name="edits[@row.RowNumber]"
+                                               value=""
+                                               class="form-control form-control-sm"
+                                               inputmode="numeric"
+                                               pattern="(\d{9}|\d{12})?"
+                                               maxlength="12"
+                                               placeholder="9 или 12 цифри" />
                                     </td>
                                     <td>
-                                        <input type="text" name="edits[@row.RowNumber]" value="" class="form-control form-control-sm" placeholder="въведи ЕИК (9 или 12 цифри)" />
+                                        <span>@row.TruncatedText</span>
+                                        @if ((row.FullRowText?.Length ?? 0) > 35)
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-sm btn-link search-details-open"
+                                                    data-details-target="@detailsId">
+                                                Подробно
+                                            </button>
+                                        }
                                     </td>
                                 </tr>
                             }
@@ -83,47 +78,174 @@
                     </table>
                 </div>
 
-                <div class="d-flex justify-content-end gap-2">
+                <div class="d-flex justify-content-end gap-2 mt-3">
                     <button type="button" id="saveBtn" class="btn btn-primary">Запази промените</button>
                 </div>
             </form>
+
+            <div id="searchDetailsOverlay" class="search-details-overlay" hidden>
+                <div class="search-details-window" role="dialog" aria-modal="true" aria-labelledby="searchDetailsTitle">
+                    <div class="search-details-header">
+                        <h5 id="searchDetailsTitle" class="mb-0">Пълен текст</h5>
+                        <button type="button" class="search-details-x search-details-close" aria-label="Затвори">X</button>
+                    </div>
+                    <pre id="searchDetailsText" class="search-details-text"></pre>
+                    <div class="search-details-footer">
+                        <button type="button" class="btn btn-secondary search-details-close">Затвори</button>
+                    </div>
+                </div>
+            </div>
+
+            @foreach (var row in Model.Rows.Where(r => (r.FullRowText?.Length ?? 0) > 35))
+            {
+                var detailsId = $"row-details-{row.RowNumber}";
+                <template id="@detailsId" data-title="Пълен текст - @row.CompanyName">@row.FullRowText</template>
+            }
         }
     </div>
 </div>
 
+<style>
+    .search-details-overlay[hidden] {
+        display: none !important;
+    }
+
+    .search-details-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 2000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        background: rgba(17, 24, 39, .35);
+    }
+
+    .search-details-window {
+        width: min(900px, 96vw);
+        max-height: 82vh;
+        display: flex;
+        flex-direction: column;
+        background: #fff;
+        border: 1px solid #d1d5db;
+        border-radius: .5rem;
+        box-shadow: 0 18px 50px rgba(15, 23, 42, .25);
+    }
+
+    .search-details-header,
+    .search-details-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: .75rem 1rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .search-details-x {
+        width: 2rem;
+        height: 2rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        border: 1px solid #9ca3af;
+        border-radius: .25rem;
+        background: #fff;
+        color: #111827;
+        font-size: 1.1rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .search-details-x:hover {
+        background: #f3f4f6;
+    }
+
+    .search-details-footer {
+        justify-content: flex-end;
+        border-top: 1px solid #e5e7eb;
+        border-bottom: 0;
+    }
+
+    .search-details-text {
+        margin: 0;
+        padding: 1rem;
+        overflow: auto;
+        white-space: pre-wrap;
+        font-family: inherit;
+        font-size: .95rem;
+    }
+</style>
+
 @section Scripts {
     <script>
+        const detailsOverlay = document.getElementById('searchDetailsOverlay');
+        const detailsTitle = document.getElementById('searchDetailsTitle');
+        const detailsText = document.getElementById('searchDetailsText');
+
+        function closeDetails() {
+            detailsOverlay?.setAttribute('hidden', '');
+        }
+
+        document.querySelectorAll('.search-details-open').forEach(button => {
+            button.addEventListener('click', function () {
+                const template = document.getElementById(this.dataset.detailsTarget);
+                if (!template || !detailsOverlay || !detailsText || !detailsTitle) return;
+
+                detailsTitle.textContent = template.dataset.title || 'Пълен текст';
+                detailsText.textContent = template.content.textContent || '';
+                detailsOverlay.removeAttribute('hidden');
+            });
+        });
+
+        document.querySelectorAll('.search-details-close').forEach(button => {
+            button.addEventListener('click', closeDetails);
+        });
+
+        detailsOverlay?.addEventListener('click', function (event) {
+            if (event.target === detailsOverlay) closeDetails();
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') closeDetails();
+        });
+
         document.getElementById('saveBtn')?.addEventListener('click', async function () {
             const form = document.getElementById('searchForm');
             if (!form) return;
+
             const fd = new FormData(form);
-            const obj = {};
-            for (const [k, v] of fd.entries()) {
-                if (k === '__RequestVerificationToken' || k === 'sourceFile' || k === 'file2Col') continue;
-                // keys are like edits[ROWNUMBER]
-                const m = k.match(/^edits\[(.*)\]$/);
-                if (m) obj[m[1]] = v;
+            const edits = {};
+            for (const [key, value] of fd.entries()) {
+                const match = key.match(/^edits\[(.*)\]$/);
+                if (match) edits[match[1]] = value;
             }
-            const token = fd.get('__RequestVerificationToken');
-            const sourceFile = fd.get('sourceFile');
-            const file2Col = fd.get('file2Col');
 
             try {
                 const resp = await fetch('/Search/SaveOperatorEdits', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
-                    body: JSON.stringify({ sourceFile, file2Col: parseInt(file2Col), edits: obj })
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': fd.get('__RequestVerificationToken')
+                    },
+                    body: JSON.stringify({
+                        sourceFile: fd.get('sourceFile'),
+                        file2Col: parseInt(fd.get('file2Col'), 10),
+                        edits
+                    })
                 });
+
                 const data = await resp.json();
                 if (data.success) {
                     let msg = 'Записано: ' + data.filename + '\nПът: ' + data.path;
-                    if (data.errors && data.errors.length) msg += '\nErrors:\n' + data.errors.join('\n');
+                    if (data.errors && data.errors.length) msg += '\nГрешки:\n' + data.errors.join('\n');
                     alert(msg);
                 } else {
-                    alert('Save failed');
+                    alert('Записът не беше успешен.');
                 }
             } catch (e) {
-                alert('Error: ' + e);
+                alert('Грешка: ' + e);
             }
         });
     </script>
