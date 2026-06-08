@@ -37,7 +37,7 @@ namespace AddEiksInXlsxFile.Services
                 var eikRaw = ws1.Cell(r, file1EikCol).GetString().Trim();
                 if (string.IsNullOrEmpty(eikRaw)) continue;
                 var digits = Regex.Replace(eikRaw, "\\D", "");
-                if (digits.Length != 9 && digits.Length != 12) continue;
+                if (digits.Length != 9 && digits.Length != 10 && digits.Length != 12) continue;
                 if (!map.TryGetValue(norm, out var set))
                 {
                     set = new HashSet<string>();

@@ -145,7 +145,7 @@ namespace AddEiksInXlsxFile.Controllers
             int companyCol = (file2Col ?? 1);
             int eikCol = companyCol + 1;
 
-            var eikRegex = new Regex("^(\\d{9}|\\d{12})$");
+            var eikRegex = new Regex("^(\\d{9}|\\d{10}|\\d{12})$");
             int applied = 0;
             if (edits != null)
             {
