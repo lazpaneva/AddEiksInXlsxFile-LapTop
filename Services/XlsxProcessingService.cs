@@ -27,6 +27,7 @@ namespace AddEiksInXlsxFile.Services
             int file1EikCol = DetectEikColumn(ws1, file1CompanyCol);
 
             var map = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            var allEiks = new HashSet<string>();
 
             var lastRow1 = ws1.LastRowUsed()?.RowNumber() ?? 0;
             for (int r = 2; r <= lastRow1; r++)
@@ -50,6 +51,7 @@ namespace AddEiksInXlsxFile.Services
                 var digits = Regex.Replace(eikRaw, "\\D", "");
                 if (digits.Length != 9 && digits.Length != 10 && digits.Length != 13) continue;
                 set.Add(digits);
+                    allEiks.Add(digits);
             }
 
             // Prepare new workbook for sorted output
@@ -222,6 +224,7 @@ namespace AddEiksInXlsxFile.Services
                 OutputFilePath = resultPath,
                 TotalRows = dataRows.Count,
                 MatchedCount = matchedCount,
+                UniqueEiksCount = allEiks.Count,
                 ErrorMessage = null
             };
         }

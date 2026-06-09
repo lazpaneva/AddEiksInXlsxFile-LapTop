@@ -181,6 +181,7 @@ namespace AddEiksInXlsxFile.Controllers
 
             var eikRegex = new Regex("^(\\d{9}|\\d{10}|\\d{13})$");
             int applied = 0;
+            int changedRows = 0;
             if (edits != null)
             {
                 foreach (var kv in edits)
@@ -205,6 +206,7 @@ namespace AddEiksInXlsxFile.Controllers
                     if (string.IsNullOrEmpty(newEik))
                     {
                         ws.Cell(row, eikCol).Clear(ClosedXML.Excel.XLClearOptions.Contents);
+                        changedRows++;
                         continue;
                     }
 
@@ -216,10 +218,12 @@ namespace AddEiksInXlsxFile.Controllers
 
                     ws.Cell(row, eikCol).Value = newEik;
                     applied++;
+                    changedRows++;
                 }
             }
 
             NormalizeCompanyNames(ws, companyCol, lastRow);
+            var progress = CountOperatorProgress(sourcePath, ws, eikCol, lastRow);
 
             // save new file to Downloads; overwrite the same operator result on every save
             wb.SaveAs(outPath);
@@ -231,11 +235,13 @@ namespace AddEiksInXlsxFile.Controllers
                 {
                     OutputFileName = outName,
                     OutputFilePath = outPath,
-                    TotalRows = lastRow - 1,
-                    MatchedCount = applied,
+                    TotalRows = progress.OriginalMissingRows,
+                    MatchedCount = progress.ProcessedRows,
+                    UniqueEiksCount = progress.UniqueEiksCount,
                     ErrorMessage = errors.Count > 0 ? string.Join("; ", errors) : null
                 };
                 var userId = User?.Identity?.Name;
+
                 await _statisticsService.RecordAsync(proc, userId, null, sourceFile);
             }
             catch
@@ -243,7 +249,17 @@ namespace AddEiksInXlsxFile.Controllers
                 // swallow logging errors
             }
 
-            return Json(new { success = true, filename = outName, path = outPath, errors });
+            return Json(new
+            {
+                success = true,
+                filename = outName,
+                path = outPath,
+                errors,
+                changedRows,
+                totalMissingRows = progress.OriginalMissingRows,
+                processedRows = progress.ProcessedRows,
+                uniqueEiksCount = progress.UniqueEiksCount
+            });
         }
 
         private static void NormalizeCompanyNames(ClosedXML.Excel.IXLWorksheet ws, int companyCol, int lastRow)
@@ -253,6 +269,35 @@ namespace AddEiksInXlsxFile.Controllers
                 var normalized = StringNormalizationService.NormalizeCompanyName(ws.Cell(row, companyCol).GetString());
                 ws.Cell(row, companyCol).Value = normalized;
             }
+        }
+
+        private static (int OriginalMissingRows, int ProcessedRows, int UniqueEiksCount) CountOperatorProgress(string sourcePath, ClosedXML.Excel.IXLWorksheet editedWs, int eikCol, int editedLastRow)
+        {
+            using var sourceWb = new ClosedXML.Excel.XLWorkbook(sourcePath);
+            var sourceWs = sourceWb.Worksheets.First();
+            var sourceLastRow = sourceWs.LastRowUsed()?.RowNumber() ?? 0;
+            var lastRow = Math.Min(sourceLastRow, editedLastRow);
+            var uniqueEiks = new HashSet<string>(StringComparer.Ordinal);
+            var originalMissingRows = 0;
+            var processedRows = 0;
+
+            for (int row = 2; row <= lastRow; row++)
+            {
+                var original = sourceWs.Cell(row, eikCol).GetString().Trim();
+                if (!string.Equals(original, "!!!!", StringComparison.Ordinal)) continue;
+
+                originalMissingRows++;
+                var edited = editedWs.Cell(row, eikCol).GetString().Trim();
+                if (string.Equals(edited, "!!!!", StringComparison.Ordinal)) continue;
+
+                processedRows++;
+                if (!string.IsNullOrWhiteSpace(edited))
+                {
+                    uniqueEiks.Add(edited);
+                }
+            }
+
+            return (originalMissingRows, processedRows, uniqueEiks.Count);
         }
 
         private static string GetOperatorResultPath(string sourcePath, string? preferredDirectory = null)

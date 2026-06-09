@@ -1,0 +1,31 @@
+@model AddEiksInXlsxFile.Models.StatisticsViewModel
+
+@{
+    ViewData["Title"] = "Statistics";
+}
+
+<h2>Statistics</h2>
+
+<form method="get" class="row g-3">
+    <div class="col-auto">
+        <label class="form-label">From</label>
+        <input type="date" name="from" value="@Model.From.ToString("yyyy-MM-dd")" class="form-control" />
+    </div>
+    <div class="col-auto">
+        <label class="form-label">To</label>
+        <input type="date" name="to" value="@Model.To.ToString("yyyy-MM-dd")" class="form-control" />
+    </div>
+    <div class="col-auto align-self-end">
+        <button class="btn btn-primary">Filter</button>
+    </div>
+</form>
+
+<div class="mt-4">
+    <dl class="row">
+        <dt class="col-sm-4">Total Rows Checked</dt>
+        <dd class="col-sm-8">@Model.TotalRowsChecked</dd>
+
+        <dt class="col-sm-4">Unique EIKs</dt>
+        <dd class="col-sm-8">@Model.UniqueEiks</dd>
+    </dl>
+</div>

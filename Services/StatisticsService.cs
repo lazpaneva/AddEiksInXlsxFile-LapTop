@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using AddEiksInXlsxFile.Data;
 using AddEiksInXlsxFile.Models;
 
@@ -13,18 +14,31 @@ namespace AddEiksInXlsxFile.Services
             _db = db;
         }
 
-        public async Task RecordAsync(ProcessResult result, string? userId, string? inputFile1, string? inputFile2)
+        public async Task RecordAsync(ProcessResult result, string? userId, string? inputFile1, string? inputFile2, int? pageNumber = null)
         {
             try
             {
+                // If this is an operator edit for a specific page, ensure we only count that page once per user+file
+                if (pageNumber.HasValue && !string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(inputFile2))
+                {
+                    var already = await _db.ProcessingStatistics.AnyAsync(s => s.UserId == userId && s.InputFile2 == inputFile2 && s.PageNumber == pageNumber.Value);
+                    if (already)
+                    {
+                        // already recorded for this page; do not double-count
+                        return;
+                    }
+                }
+
                 var stat = new ProcessingStatistics
                 {
                     UserId = userId,
                     TimestampUtc = System.DateTime.UtcNow,
                     InputFile1 = inputFile1,
                     InputFile2 = inputFile2,
+                    PageNumber = pageNumber,
                     OutputFilePath = result.OutputFilePath,
                     TotalRows = result.TotalRows,
+                    UniqueEiksCount = result.UniqueEiksCount,
                     MatchedCount = result.MatchedCount,
                     SuccessRate = result.TotalRows == 0 ? 0 : (decimal)result.MatchedCount / result.TotalRows,
                     ErrorMessage = result.ErrorMessage
