@@ -48,7 +48,7 @@ namespace AddEiksInXlsxFile.Services
                 }
 
                 var digits = Regex.Replace(eikRaw, "\\D", "");
-                if (digits.Length != 9 && digits.Length != 10 && digits.Length != 12) continue;
+                if (digits.Length != 9 && digits.Length != 10 && digits.Length != 13) continue;
                 set.Add(digits);
             }
 

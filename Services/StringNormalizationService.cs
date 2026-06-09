@@ -23,6 +23,10 @@ namespace AddEiksInXlsxFile.Services
                 .Replace("  ", " ")
                 .Replace("  ", " ")
                 .Replace(". ", ".")
+                .Replace(", ,", " ")
+                .Replace(",,", " ")
+                .Replace(":", " ")
+                .Replace(";", " ")
                 .Replace(" \n", " ")
                 .Replace("\n", " ");
 

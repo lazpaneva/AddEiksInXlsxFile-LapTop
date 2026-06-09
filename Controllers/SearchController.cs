@@ -179,7 +179,7 @@ namespace AddEiksInXlsxFile.Controllers
             int companyCol = (file2Col ?? 1);
             int eikCol = companyCol + 1;
 
-            var eikRegex = new Regex("^(\\d{9}|\\d{10}|\\d{12})$");
+            var eikRegex = new Regex("^(\\d{9}|\\d{10}|\\d{13})$");
             int applied = 0;
             if (edits != null)
             {
@@ -219,6 +219,8 @@ namespace AddEiksInXlsxFile.Controllers
                 }
             }
 
+            NormalizeCompanyNames(ws, companyCol, lastRow);
+
             // save new file to Downloads; overwrite the same operator result on every save
             wb.SaveAs(outPath);
 
@@ -242,6 +244,15 @@ namespace AddEiksInXlsxFile.Controllers
             }
 
             return Json(new { success = true, filename = outName, path = outPath, errors });
+        }
+
+        private static void NormalizeCompanyNames(ClosedXML.Excel.IXLWorksheet ws, int companyCol, int lastRow)
+        {
+            for (int row = 2; row <= lastRow; row++)
+            {
+                var normalized = StringNormalizationService.NormalizeCompanyName(ws.Cell(row, companyCol).GetString());
+                ws.Cell(row, companyCol).Value = normalized;
+            }
         }
 
         private static string GetOperatorResultPath(string sourcePath, string? preferredDirectory = null)

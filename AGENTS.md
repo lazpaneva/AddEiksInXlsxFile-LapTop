@@ -58,7 +58,7 @@ Download Result. Statistics only visible in window.
 - **File Upload Limits**: Specify max file size, accepted formats (XLSX only)
 - **Name Matching Strategy**: Case-insensitive, exact match after clearing all types of dashes, quotes, periods, commas, multiple spaces with one, etc.
 The following rules should also be added: if there are identical company names with different identifiers, do not fill in the new UIC column; if there is an empty field in the UIC, leave it blank; if there is an undiscovered company, put "!!!!"
-- **EIK Format**: 9 or 12 digit numeric string (validate format before processing). If the EIK value is invalid, it should not be copied to the result file and should be counted as an unmatched entry.
+- **EIK Format**: 9, 10, or 13 digit numeric string, or blank (validate format before processing). If the EIK value is invalid, it should not be copied to the result file and should be counted as an unmatched entry.
 - **Statistics Tracked**: Total companies, matched count, success rate, unmatched details
 - **Error Handling**: Invalid file format, empty files, malformed XLSX, encoding issues
 
