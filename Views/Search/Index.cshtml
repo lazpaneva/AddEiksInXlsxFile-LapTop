@@ -2,7 +2,9 @@
 @using System
 @{
     ViewData["Title"] = "Search";
-    var file2Col = (int?)(ViewData["File2Col"] ?? 1);
+    var file2Col = Model?.File2Col > 0 ? Model.File2Col : (int?)(ViewData["File2Col"] ?? 1);
+    var previousPage = Math.Max(1, (Model?.CurrentPage ?? 1) - 1);
+    var nextPage = Math.Min(Model?.TotalPages ?? 1, (Model?.CurrentPage ?? 1) + 1);
 }
 
 <div class="card">
@@ -32,6 +34,31 @@
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="sourceFile" value="@Model.SourceFile" />
                 <input type="hidden" name="file2Col" value="@file2Col" />
+
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                    <div>
+                        Редове @(((Model.CurrentPage - 1) * Model.PageSize) + 1)-@(Math.Min(Model.CurrentPage * Model.PageSize, Model.TotalRows)) от @Model.TotalRows
+                    </div>
+                    <nav aria-label="Страници">
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item @(Model.CurrentPage <= 1 ? "disabled" : "")">
+                                <a class="page-link" href="@Url.Action("Index", new { sourceFile = Model.SourceFile, file2Col, page = 1 })">Първа</a>
+                            </li>
+                            <li class="page-item @(Model.CurrentPage <= 1 ? "disabled" : "")">
+                                <a class="page-link" href="@Url.Action("Index", new { sourceFile = Model.SourceFile, file2Col, page = previousPage })">Предишна</a>
+                            </li>
+                            <li class="page-item active" aria-current="page">
+                                <span class="page-link">@Model.CurrentPage / @Model.TotalPages</span>
+                            </li>
+                            <li class="page-item @(Model.CurrentPage >= Model.TotalPages ? "disabled" : "")">
+                                <a class="page-link" href="@Url.Action("Index", new { sourceFile = Model.SourceFile, file2Col, page = nextPage })">Следваща</a>
+                            </li>
+                            <li class="page-item @(Model.CurrentPage >= Model.TotalPages ? "disabled" : "")">
+                                <a class="page-link" href="@Url.Action("Index", new { sourceFile = Model.SourceFile, file2Col, page = Model.TotalPages })">Последна</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
 
                 <div style="overflow-y:auto; max-height: calc(100vh - 160px);">
                     <table class="table table-sm table-bordered align-middle">

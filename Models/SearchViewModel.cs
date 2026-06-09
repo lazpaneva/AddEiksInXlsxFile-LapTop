@@ -17,5 +17,10 @@ namespace AddEiksInXlsxFile.Models
     {
         public string SourceFile { get; set; } = string.Empty;
         public List<SearchRow> Rows { get; set; } = new();
+        public int CurrentPage { get; set; } = 1;
+        public int PageSize { get; set; } = 50;
+        public int TotalRows { get; set; }
+        public int TotalPages { get; set; }
+        public int File2Col { get; set; } = 1;
     }
 }

@@ -9,6 +9,23 @@ namespace AddEiksInXlsxFile.Services
             if (string.IsNullOrWhiteSpace(input)) return string.Empty;
             var s = input.Trim();
 
+            s = s.Replace("\"", " ")
+                .Replace("”", " ")
+                .Replace("„", " ")
+                .Replace("“", " ")
+                .Replace("«", " ")
+                .Replace("»", " ")
+                .Replace("—", "-")
+                .Replace(" -", "-")
+                .Replace("- ", "-")
+                .Replace("   ", " ")
+                .Replace("  ", " ")
+                .Replace("  ", " ")
+                .Replace("  ", " ")
+                .Replace(". ", ".")
+                .Replace(" \n", " ")
+                .Replace("\n", " ");
+
             // Remove common quote characters
             var quotes = new[] { '"', '\'', '\u2018', '\u2019', '\u201C', '\u201D', '\u00AB', '\u00BB', '\u201A', '\u201B' };
             foreach (var q in quotes) s = s.Replace(q.ToString(), string.Empty);

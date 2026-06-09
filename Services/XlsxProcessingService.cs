@@ -35,14 +35,20 @@ namespace AddEiksInXlsxFile.Services
                 var norm = StringNormalizationService.NormalizeCompanyName(name);
                 if (string.IsNullOrEmpty(norm)) continue;
                 var eikRaw = ws1.Cell(r, file1EikCol).GetString().Trim();
-                if (string.IsNullOrEmpty(eikRaw)) continue;
-                var digits = Regex.Replace(eikRaw, "\\D", "");
-                if (digits.Length != 9 && digits.Length != 10 && digits.Length != 12) continue;
                 if (!map.TryGetValue(norm, out var set))
                 {
                     set = new HashSet<string>();
                     map[norm] = set;
                 }
+
+                if (string.IsNullOrEmpty(eikRaw))
+                {
+                    set.Add(string.Empty);
+                    continue;
+                }
+
+                var digits = Regex.Replace(eikRaw, "\\D", "");
+                if (digits.Length != 9 && digits.Length != 10 && digits.Length != 12) continue;
                 set.Add(digits);
             }
 
@@ -50,8 +56,13 @@ namespace AddEiksInXlsxFile.Services
             var newWb = new XLWorkbook();
             var newWs = newWb.Worksheets.Add(ws2.Name ?? "Sheet1");
 
-            // Copy header row (assume row 1 is header)
-            ws2.Row(1).CopyTo(newWs.Row(1));
+            int lastCol2 = ws2.LastColumnUsed()?.ColumnNumber() ?? 0;
+
+            // Determine target column for EIK in output (file2CompanyCol + 1)
+            int targetCol = file2CompanyCol + 1;
+
+            // Copy header row and leave room for the inserted EIK column.
+            CopyRowWithInsertedColumn(ws2, newWs, 1, 1, lastCol2, targetCol);
 
             int lastRow2 = ws2.LastRowUsed()?.RowNumber() ?? 0;
             var dataRows = new List<(string Norm, int OrigRow)>();
@@ -76,15 +87,12 @@ namespace AddEiksInXlsxFile.Services
                 return StringComparer.OrdinalIgnoreCase.Compare(an, bn);
             });
 
-            // Determine target column for EIK in output (file2CompanyCol + 1)
-            int targetCol = file2CompanyCol + 1;
-
             int outRow = 2;
             int matchedCount = 0;
             foreach (var (norm, origRow) in dataRows)
             {
-                // Copy original row into new sheet
-                ws2.Row(origRow).CopyTo(newWs.Row(outRow));
+                // Copy original row into new sheet while inserting the EIK column.
+                CopyRowWithInsertedColumn(ws2, newWs, origRow, outRow, lastCol2, targetCol);
 
                 // Determine EIK value
                 string eikValue = "!!!!";
@@ -107,7 +115,7 @@ namespace AddEiksInXlsxFile.Services
             }
 
             // Ensure header for EIK column
-            if (newWs.Cell(1, targetCol).IsEmpty()) newWs.Cell(1, targetCol).Value = "EIK";
+            newWs.Cell(1, targetCol).Value = "EIK";
             // Remove any background fills from the generated sheet (do not preserve source fills)
             var usedRange = newWs.RangeUsed();
             if (usedRange != null)
@@ -236,6 +244,17 @@ namespace AddEiksInXlsxFile.Services
 
             // Fallback: column to the right of company column
             return companyCol + 1;
+        }
+
+        private static void CopyRowWithInsertedColumn(IXLWorksheet source, IXLWorksheet target, int sourceRow, int targetRow, int lastCol, int insertedCol)
+        {
+            target.Row(targetRow).Height = source.Row(sourceRow).Height;
+
+            for (int c = 1; c <= lastCol; c++)
+            {
+                var targetCol = c >= insertedCol ? c + 1 : c;
+                source.Cell(sourceRow, c).CopyTo(target.Cell(targetRow, targetCol));
+            }
         }
 
         private static string MakeResultFileName(string original)

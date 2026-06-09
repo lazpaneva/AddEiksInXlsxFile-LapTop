@@ -20,7 +20,7 @@ namespace AddEiksInXlsxFile.Controllers
         }
 
         [HttpGet]
-        public IActionResult Index(string? sourceFile = null, int? file2Col = null)
+        public IActionResult Index(string? sourceFile = null, int? file2Col = null, int page = 1)
         {
             // try Downloads first, then uploads
             string? path = null;
@@ -45,7 +45,10 @@ namespace AddEiksInXlsxFile.Controllers
                 var downloads = Path.Combine(userProfile ?? Directory.GetCurrentDirectory(), "Downloads");
                 if (Directory.Exists(downloads))
                 {
-                    var files = Directory.GetFiles(downloads, "*-result.xlsx").OrderByDescending(System.IO.File.GetLastWriteTime).ToArray();
+                    var files = Directory.GetFiles(downloads, "*-result.xlsx")
+                        .Where(f => !Path.GetFileName(f).EndsWith("-operator-result.xlsx", StringComparison.OrdinalIgnoreCase))
+                        .OrderByDescending(System.IO.File.GetLastWriteTime)
+                        .ToArray();
                     if (files.Length > 0) path = files[0];
                 }
                 if (string.IsNullOrEmpty(path))
@@ -53,7 +56,10 @@ namespace AddEiksInXlsxFile.Controllers
                     var uploads = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
                     if (Directory.Exists(uploads))
                     {
-                        var files = Directory.GetFiles(uploads, "*-result.xlsx").OrderByDescending(System.IO.File.GetLastWriteTime).ToArray();
+                        var files = Directory.GetFiles(uploads, "*-result.xlsx")
+                            .Where(f => !Path.GetFileName(f).EndsWith("-operator-result.xlsx", StringComparison.OrdinalIgnoreCase))
+                            .OrderByDescending(System.IO.File.GetLastWriteTime)
+                            .ToArray();
                         if (files.Length > 0) path = files[0];
                     }
                 }
@@ -61,8 +67,9 @@ namespace AddEiksInXlsxFile.Controllers
 
             if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path))
             {
-                ViewData["File2Col"] = file2Col ?? 1;
-                return View(new SearchViewModel());
+                var emptyCompanyCol = file2Col ?? 1;
+                ViewData["File2Col"] = emptyCompanyCol;
+                return View(new SearchViewModel { File2Col = emptyCompanyCol });
             }
 
             int companyCol = file2Col ?? 1;
@@ -70,7 +77,12 @@ namespace AddEiksInXlsxFile.Controllers
 
             try
             {
-                using var wb = new ClosedXML.Excel.XLWorkbook(path);
+                var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                var downloads = Path.Combine(userProfile ?? Directory.GetCurrentDirectory(), "Downloads");
+                var readPath = GetOperatorResultPath(path, downloads);
+                if (!System.IO.File.Exists(readPath)) readPath = path;
+
+                using var wb = new ClosedXML.Excel.XLWorkbook(readPath);
                 var ws = wb.Worksheets.First();
 
                 int lastRow = ws.LastRowUsed()?.RowNumber() ?? 0;
@@ -105,7 +117,25 @@ namespace AddEiksInXlsxFile.Controllers
                     });
                 }
 
-                return View(new SearchViewModel { SourceFile = Path.GetFileName(path), Rows = rows });
+                const int pageSize = 50;
+                var totalRows = rows.Count;
+                var totalPages = Math.Max(1, (int)Math.Ceiling(totalRows / (double)pageSize));
+                var currentPage = Math.Clamp(page, 1, totalPages);
+                var pageRows = rows
+                    .Skip((currentPage - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToList();
+
+                return View(new SearchViewModel
+                {
+                    SourceFile = Path.GetFileName(path),
+                    Rows = pageRows,
+                    CurrentPage = currentPage,
+                    PageSize = pageSize,
+                    TotalRows = totalRows,
+                    TotalPages = totalPages,
+                    File2Col = companyCol
+                });
             }
             catch (Exception ex)
             {
@@ -139,7 +169,11 @@ namespace AddEiksInXlsxFile.Controllers
             }
             if (string.IsNullOrEmpty(sourcePath)) return NotFound();
 
-            var wb = new ClosedXML.Excel.XLWorkbook(sourcePath);
+            var outName = Path.GetFileNameWithoutExtension(sourceFile) + "-operator-result" + Path.GetExtension(sourceFile);
+            var outPath = Path.Combine(downloads, outName);
+            var editPath = System.IO.File.Exists(outPath) ? outPath : sourcePath;
+
+            var wb = new ClosedXML.Excel.XLWorkbook(editPath);
             var ws = wb.Worksheets.First();
             int lastRow = ws.LastRowUsed()?.RowNumber() ?? 0;
             int companyCol = (file2Col ?? 1);
@@ -157,18 +191,26 @@ namespace AddEiksInXlsxFile.Controllers
                         continue;
                     }
                     var newEik = (kv.Value ?? string.Empty).Trim();
-                    if (string.IsNullOrEmpty(newEik)) continue; // skip empty
-                    if (!eikRegex.IsMatch(newEik))
-                    {
-                        errors.Add($"Row {row}: invalid EIK '{newEik}'");
-                        continue;
-                    }
 
                     // ensure the cell was previously !!!!
                     var current = ws.Cell(row, eikCol).GetString();
-                    if (!string.Equals(current, "!!!!", StringComparison.Ordinal))
+                    if (!string.Equals(current, "!!!!", StringComparison.Ordinal) &&
+                        !string.IsNullOrWhiteSpace(current) &&
+                        !string.Equals(current, newEik, StringComparison.Ordinal))
                     {
                         errors.Add($"Row {row}: cell not marked with !!!!, skipped.");
+                        continue;
+                    }
+
+                    if (string.IsNullOrEmpty(newEik))
+                    {
+                        ws.Cell(row, eikCol).Clear(ClosedXML.Excel.XLClearOptions.Contents);
+                        continue;
+                    }
+
+                    if (!eikRegex.IsMatch(newEik))
+                    {
+                        errors.Add($"Row {row}: invalid EIK '{newEik}'");
                         continue;
                     }
 
@@ -177,9 +219,7 @@ namespace AddEiksInXlsxFile.Controllers
                 }
             }
 
-            // save new file to Downloads
-            var outName = Path.GetFileNameWithoutExtension(sourceFile) + "-operator-result" + Path.GetExtension(sourceFile);
-            var outPath = Path.Combine(downloads, outName);
+            // save new file to Downloads; overwrite the same operator result on every save
             wb.SaveAs(outPath);
 
             // record statistics for operator edits (best-effort)
@@ -202,6 +242,20 @@ namespace AddEiksInXlsxFile.Controllers
             }
 
             return Json(new { success = true, filename = outName, path = outPath, errors });
+        }
+
+        private static string GetOperatorResultPath(string sourcePath, string? preferredDirectory = null)
+        {
+            var fileName = Path.GetFileName(sourcePath);
+            var outName = Path.GetFileNameWithoutExtension(fileName) + "-operator-result" + Path.GetExtension(fileName);
+            if (!string.IsNullOrEmpty(preferredDirectory))
+            {
+                var preferredPath = Path.Combine(preferredDirectory, outName);
+                if (System.IO.File.Exists(preferredPath)) return preferredPath;
+            }
+
+            var directory = Path.GetDirectoryName(sourcePath) ?? Directory.GetCurrentDirectory();
+            return Path.Combine(directory, outName);
         }
     }
 
