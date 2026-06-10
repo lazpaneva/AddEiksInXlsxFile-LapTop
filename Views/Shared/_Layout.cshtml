@@ -3,39 +3,53 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - AddEiksInXlsxFile</title>
+    <title>@ViewData["Title"] - Добавяне на колона с ЕИК в xlsx файл</title>
     <link rel="stylesheet" href="/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="/css/site.css" />
 </head>
 <body>
+    @{
+        var isLoginPage =
+            string.Equals(ViewContext.RouteData.Values["controller"]?.ToString(), "Account", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(ViewContext.RouteData.Values["action"]?.ToString(), "Login", StringComparison.OrdinalIgnoreCase);
+
+        var headerTitle = "Добавяне на колона с ЕИК в xlsx файл";
+            
+        /*var headerTitle = isLoginPage
+            ? "Добавяне на колона с ЕИК в xlsx файл"
+            : "AddEiksInXlsxFile";*/
+    }
     <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
         <div class="container-fluid">
-            <a class="navbar-brand brand" href="/">AddEiksInXlsxFile</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navMenu">
-                <ul class="navbar-nav align-items-center nav-center">
-                    <li class="nav-item"><a class="nav-link" href="/Upload">Upload</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/Search" id="searchBtn">Search</a></li>
-                    
-                    @if (User?.Identity?.IsAuthenticated ?? false)
-                    {
-                        <li class="nav-item"><a class="nav-link" href="/Statistics">Statistics</a></li>
+            <a class="navbar-brand brand" href="/">@headerTitle</a>
+            @if (!isLoginPage)
+            {
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navMenu">
+                    <ul class="navbar-nav align-items-center nav-center">
+                        <li class="nav-item"><a class="nav-link" href="/Upload">Upload</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/Search" id="searchBtn">Search</a></li>
+                        
+                        @if (User?.Identity?.IsAuthenticated ?? false)
+                        {
+                            <li class="nav-item"><a class="nav-link" href="/Statistics">Statistics</a></li>
 
-                        <li class="nav-item ms-auto">
-                            <form method="post" action="/Account/Logout" class="d-flex">
-                                @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-link">Logout</button>
-                            </form>
-                        </li>
-                    }
-                    else
-                    {
-                        <li class="nav-item"><a class="nav-link btn btn-primary text-white ms-3" href="/Account/Login">Log in</a></li>
-                    }
-                </ul>
-            </div>
+                            <li class="nav-item ms-auto">
+                                <form method="post" action="/Account/Logout" class="d-flex">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-link">Logout</button>
+                                </form>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item"><a class="nav-link btn btn-primary text-white ms-3" href="/Account/Login">Log in</a></li>
+                        }
+                    </ul>
+                </div>
+            }
         </div>
     </nav>
 
