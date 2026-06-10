@@ -22,10 +22,13 @@
 
 <div class="mt-4">
     <dl class="row">
-        <dt class="col-sm-4">Total Rows Checked</dt>
-        <dd class="col-sm-8">@Model.TotalRowsChecked</dd>
+        <dt class="col-sm-4">Обработени удивителни</dt>
+        <dd class="col-sm-8">@Model.ProcessedExclamations</dd>
 
-        <dt class="col-sm-4">Unique EIKs</dt>
-        <dd class="col-sm-8">@Model.UniqueEiks</dd>
+        <dt class="col-sm-4">Уникални ЕИК от обработените удивителни</dt>
+        <dd class="col-sm-8">@Model.UniqueEiksFromProcessedExclamations</dd>
+
+        <dt class="col-sm-4">Общ брой удивителни в началото на периода</dt>
+        <dd class="col-sm-8">@Model.TotalExclamationsAtPeriodStart</dd>
     </dl>
 </div>

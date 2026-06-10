@@ -18,6 +18,11 @@ namespace AddEiksInXlsxFile.Services
         {
             try
             {
+                if (!IsOperatorResult(result.OutputFileName) && !IsOperatorResult(result.OutputFilePath))
+                {
+                    return;
+                }
+
                 // If this is an operator edit for a specific page, ensure we only count that page once per user+file
                 if (pageNumber.HasValue && !string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(inputFile2))
                 {
@@ -50,6 +55,17 @@ namespace AddEiksInXlsxFile.Services
             {
                 // swallow exceptions: statistics are best-effort
             }
+        }
+
+        private static bool IsOperatorResult(string? fileNameOrPath)
+        {
+            if (string.IsNullOrWhiteSpace(fileNameOrPath))
+            {
+                return false;
+            }
+
+            var fileName = System.IO.Path.GetFileName(fileNameOrPath);
+            return fileName.EndsWith("-operator-result.xlsx", System.StringComparison.OrdinalIgnoreCase);
         }
     }
 }

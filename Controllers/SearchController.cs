@@ -242,7 +242,7 @@ namespace AddEiksInXlsxFile.Controllers
                 };
                 var userId = User?.Identity?.Name;
 
-                await _statisticsService.RecordAsync(proc, userId, null, sourceFile);
+                await _statisticsService.RecordAsync(proc, userId, null, outName);
             }
             catch
             {

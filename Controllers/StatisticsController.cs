@@ -27,22 +27,17 @@ namespace AddEiksInXlsxFile.Controllers
             var end = to?.Date.AddDays(1).AddTicks(-1) ?? DateTime.UtcNow.Date.AddDays(1).AddTicks(-1);
 
             var query = _db.ProcessingStatistics.AsQueryable()
-                .Where(s => s.TimestampUtc >= start && s.TimestampUtc <= end);
+                .Where(s => s.TimestampUtc >= start && s.TimestampUtc <= end)
+                .Where(s =>
+                    (s.OutputFilePath != null && s.OutputFilePath.EndsWith("-operator-result.xlsx")) ||
+                    (s.InputFile2 != null && s.InputFile2.EndsWith("-operator-result.xlsx")));
 
             vm.From = start;
             vm.To = end;
 
-            vm.TotalRowsChecked = await query.SumAsync(s => (int?)s.TotalRows) ?? 0;
-
-            var hasUniqueEiks = typeof(ProcessingStatistics).GetProperty("UniqueEiksCount") != null;
-            if (hasUniqueEiks)
-            {
-                vm.UniqueEiks = await query.SumAsync(s => (int?)EF.Property<int>(s, "UniqueEiksCount")) ?? 0;
-            }
-            else
-            {
-                vm.UniqueEiks = await query.SumAsync(s => (int?)s.MatchedCount) ?? 0;
-            }
+            vm.ProcessedExclamations = await query.SumAsync(s => (int?)s.MatchedCount) ?? 0;
+            vm.UniqueEiksFromProcessedExclamations = await query.SumAsync(s => (int?)s.UniqueEiksCount) ?? 0;
+            vm.TotalExclamationsAtPeriodStart = await query.SumAsync(s => (int?)s.TotalRows) ?? 0;
 
             return View(vm);
         }
