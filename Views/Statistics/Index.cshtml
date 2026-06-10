@@ -15,6 +15,15 @@
         <label class="form-label">To</label>
         <input type="date" name="to" value="@Model.To.ToString("yyyy-MM-dd")" class="form-control" />
     </div>
+    <div class="col-auto">
+        <label class="form-label">User</label>
+        <select name="userId" class="form-select">
+            @foreach (var user in Model.Users)
+            {
+                <option value="@user" selected="@(user == Model.SelectedUserId)">@user</option>
+            }
+        </select>
+    </div>
     <div class="col-auto align-self-end">
         <button class="btn btn-primary">Filter</button>
     </div>
@@ -32,3 +41,38 @@
         <dd class="col-sm-8">@Model.TotalExclamationsAtPeriodStart</dd>
     </dl>
 </div>
+
+<hr class="my-4" />
+
+<h3 class="h5">Обработени удивителни по файлове</h3>
+
+@if (Model.Files.Count == 0)
+{
+    <p class="text-muted">Няма обработени файлове за избрания период.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>Файл</th>
+                    <th>Обработени удивителни</th>
+                    <th>Уникални ЕИК</th>
+                    <th>Общ брой удивителни в началото</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var file in Model.Files)
+                {
+                    <tr>
+                        <td>@file.FileName</td>
+                        <td>@file.ProcessedExclamations</td>
+                        <td>@file.UniqueEiksFromProcessedExclamations</td>
+                        <td>@file.TotalExclamationsAtPeriodStart</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

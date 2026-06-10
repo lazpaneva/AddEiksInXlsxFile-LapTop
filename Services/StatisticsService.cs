@@ -23,32 +23,43 @@ namespace AddEiksInXlsxFile.Services
                     return;
                 }
 
-                // If this is an operator edit for a specific page, ensure we only count that page once per user+file
-                if (pageNumber.HasValue && !string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(inputFile2))
+                var outputFileName = GetOperatorResultFileName(result.OutputFileName) ?? GetOperatorResultFileName(result.OutputFilePath);
+                if (string.IsNullOrEmpty(outputFileName))
                 {
-                    var already = await _db.ProcessingStatistics.AnyAsync(s => s.UserId == userId && s.InputFile2 == inputFile2 && s.PageNumber == pageNumber.Value);
-                    if (already)
-                    {
-                        // already recorded for this page; do not double-count
-                        return;
-                    }
+                    return;
                 }
 
-                var stat = new ProcessingStatistics
+                var stat = await _db.ProcessingStatistics
+                    .Where(s => s.UserId == userId)
+                    .Where(s =>
+                        s.InputFile2 == outputFileName ||
+                        (s.OutputFilePath != null && s.OutputFilePath.EndsWith(outputFileName)))
+                    .OrderByDescending(s => s.TimestampUtc)
+                    .ThenByDescending(s => s.Id)
+                    .FirstOrDefaultAsync();
+
+                if (stat == null)
                 {
-                    UserId = userId,
-                    TimestampUtc = System.DateTime.UtcNow,
-                    InputFile1 = inputFile1,
-                    InputFile2 = inputFile2,
-                    PageNumber = pageNumber,
-                    OutputFilePath = result.OutputFilePath,
-                    TotalRows = result.TotalRows,
-                    UniqueEiksCount = result.UniqueEiksCount,
-                    MatchedCount = result.MatchedCount,
-                    SuccessRate = result.TotalRows == 0 ? 0 : (decimal)result.MatchedCount / result.TotalRows,
-                    ErrorMessage = result.ErrorMessage
-                };
-                _db.ProcessingStatistics.Add(stat);
+                    stat = new ProcessingStatistics
+                    {
+                        UserId = userId,
+                        InputFile1 = inputFile1,
+                        InputFile2 = outputFileName
+                    };
+                    _db.ProcessingStatistics.Add(stat);
+                }
+
+                stat.TimestampUtc = System.DateTime.UtcNow;
+                stat.InputFile1 = inputFile1 ?? stat.InputFile1;
+                stat.InputFile2 = outputFileName;
+                stat.PageNumber = pageNumber;
+                stat.OutputFilePath = result.OutputFilePath;
+                stat.TotalRows = result.TotalRows;
+                stat.UniqueEiksCount = result.UniqueEiksCount;
+                stat.MatchedCount = result.MatchedCount;
+                stat.SuccessRate = result.TotalRows == 0 ? 0 : (decimal)result.MatchedCount / result.TotalRows;
+                stat.ErrorMessage = result.ErrorMessage;
+
                 await _db.SaveChangesAsync();
             }
             catch
@@ -66,6 +77,16 @@ namespace AddEiksInXlsxFile.Services
 
             var fileName = System.IO.Path.GetFileName(fileNameOrPath);
             return fileName.EndsWith("-operator-result.xlsx", System.StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string? GetOperatorResultFileName(string? fileNameOrPath)
+        {
+            if (!IsOperatorResult(fileNameOrPath))
+            {
+                return null;
+            }
+
+            return System.IO.Path.GetFileName(fileNameOrPath);
         }
     }
 }
