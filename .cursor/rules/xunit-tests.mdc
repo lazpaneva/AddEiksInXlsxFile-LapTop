@@ -1,0 +1,75 @@
+---
+description: Прости xUnit тестове без Moq и допълнителни библиотеки
+globs: **/*Tests/**/*.cs
+alwaysApply: false
+---
+
+# xUnit Tests
+
+Максимално прости тестове — само **xUnit** и **project reference** към `AddEiksInXlsxFile`. Без Moq, без `Microsoft.AspNetCore.Mvc.Testing`, без EF InMemory и други допълнителни пакети.
+
+## Какво да тестваш
+
+Тествай **директно `Services/`** — нормализация, съвпадения, EIK правила, XLSX логика. Това е основният фокус.
+
+Не пиши controller или HTTP integration тестове — те изискват mock-ове и допълнителни библиотеки.
+
+## Проект
+
+```bash
+dotnet new xunit -n AddEiksInXlsxFile.Tests -o AddEiksInXlsxFile.Tests
+dotnet sln add AddEiksInXlsxFile.Tests/AddEiksInXlsxFile.Tests.csproj
+dotnet add AddEiksInXlsxFile.Tests reference AddEiksInXlsxFile.csproj
+```
+
+Само тези зависимости — нищо друго.
+
+## Структура
+
+```
+AddEiksInXlsxFile.Tests/
+└── Services/
+    StringNormalizationServiceTests.cs
+    XlsxProcessingServiceTests.cs
+
+{ClassUnderTest}Tests.cs
+{Method}_{Scenario}_{ExpectedOutcome}()
+```
+
+## Assert — само стандартни методи
+
+Използвай `Assert.Equal`, `Assert.NotEqual`, `Assert.True`, `Assert.False`, `Assert.Null`, `Assert.NotNull`, `Assert.Empty`, `Assert.Throws`, `Assert.ThrowsAsync`. Без FluentAssertions, без custom helpers.
+
+```csharp
+// ✅ GOOD
+[Theory]
+[InlineData("  \"ACME\"  ", "ACME")]
+public void NormalizeCompanyName_strips_quotes(string input, string expected)
+{
+    Assert.Equal(expected, StringNormalizationService.NormalizeCompanyName(input));
+}
+
+[Fact]
+public void IsValidEik_rejects_short_value()
+{
+    Assert.False(EikValidationService.IsValidEik("12345"));
+}
+```
+
+## XLSX тестове
+
+Създавай workbook-ове в памет с **ClosedXML** (идва от основния проект). Покривай правилата от AGENTS.md:
+
+- валиден EIK: 9 или 12 цифри
+- невалиден EIK → не се копира
+- дублирани имена с различен EIK → без попълване на UIC
+- празен UIC → остава празен
+- няма съвпадение → `!!!!`
+
+## Проверка
+
+```bash
+dotnet test AddEiksInXlsxFile.Tests/AddEiksInXlsxFile.Tests.csproj
+```
+
+Не отслабвай assertions, за да минат тестовете.

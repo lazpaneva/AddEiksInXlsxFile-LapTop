@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using AddEiksInXlsxFile.Models;
 using AddEiksInXlsxFile.Services;
-using System.Text.RegularExpressions;
 
 namespace AddEiksInXlsxFile.Controllers
 {
@@ -79,43 +78,12 @@ namespace AddEiksInXlsxFile.Controllers
             {
                 var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
                 var downloads = Path.Combine(userProfile ?? Directory.GetCurrentDirectory(), "Downloads");
-                var readPath = GetOperatorResultPath(path, downloads);
+                var readPath = SearchOperatorService.GetOperatorResultPath(path, downloads);
                 if (!System.IO.File.Exists(readPath)) readPath = path;
 
                 using var wb = new ClosedXML.Excel.XLWorkbook(readPath);
                 var ws = wb.Worksheets.First();
-
-                int lastRow = ws.LastRowUsed()?.RowNumber() ?? 0;
-                int lastCol = ws.LastColumnUsed()?.ColumnNumber() ?? 2;
-                var rows = new List<SearchRow>();
-                int eikCol = companyCol + 1;
-
-                for (int r = 2; r <= lastRow; r++)
-                {
-                    var name = ws.Cell(r, companyCol).GetString();
-                    var eik = ws.Cell(r, eikCol).GetString();
-                    if (!string.Equals(eik, "!!!!", StringComparison.Ordinal)) continue;
-
-                    var parts = new List<string>();
-                    for (int c = 1; c <= lastCol; c++)
-                    {
-                        parts.Add(ws.Cell(r, c).GetString());
-                    }
-                    var full = string.Join(" | ", parts).Trim();
-                    var truncated = full.Length > 35 ? full.Substring(0, 35) : full;
-
-                    var norm = StringNormalizationService.NormalizeCompanyName(name) ?? string.Empty;
-                    rows.Add(new SearchRow
-                    {
-                        RowNumber = r,
-                        CompanyName = name,
-                        Eik = eik,
-                        Normalized = norm,
-                        FullRowText = full,
-                        TruncatedText = truncated,
-                        InputEik = string.Empty
-                    });
-                }
+                var rows = SearchOperatorService.ReadMissingEikRows(ws, companyCol);
 
                 const int pageSize = 50;
                 var totalRows = rows.Count;
@@ -179,51 +147,11 @@ namespace AddEiksInXlsxFile.Controllers
             int companyCol = (file2Col ?? 1);
             int eikCol = companyCol + 1;
 
-            var eikRegex = new Regex("^(\\d{9}|\\d{10}|\\d{13})$");
-            int applied = 0;
-            int changedRows = 0;
-            if (edits != null)
-            {
-                foreach (var kv in edits)
-                {
-                    if (!int.TryParse(kv.Key, out var row))
-                    {
-                        errors.Add($"Invalid row key: {kv.Key}");
-                        continue;
-                    }
-                    var newEik = (kv.Value ?? string.Empty).Trim();
+            var (applied, changedRows, applyErrors) = SearchOperatorService.ApplyOperatorEdits(ws, companyCol, eikCol, edits);
+            errors.AddRange(applyErrors);
 
-                    // ensure the cell was previously !!!!
-                    var current = ws.Cell(row, eikCol).GetString();
-                    if (!string.Equals(current, "!!!!", StringComparison.Ordinal) &&
-                        !string.IsNullOrWhiteSpace(current) &&
-                        !string.Equals(current, newEik, StringComparison.Ordinal))
-                    {
-                        errors.Add($"Row {row}: cell not marked with !!!!, skipped.");
-                        continue;
-                    }
-
-                    if (string.IsNullOrEmpty(newEik))
-                    {
-                        ws.Cell(row, eikCol).Clear(ClosedXML.Excel.XLClearOptions.Contents);
-                        changedRows++;
-                        continue;
-                    }
-
-                    if (!eikRegex.IsMatch(newEik))
-                    {
-                        errors.Add($"Row {row}: invalid EIK '{newEik}'");
-                        continue;
-                    }
-
-                    ws.Cell(row, eikCol).Value = newEik;
-                    applied++;
-                    changedRows++;
-                }
-            }
-
-            NormalizeCompanyNames(ws, companyCol, lastRow);
-            var progress = CountOperatorProgress(sourcePath, ws, eikCol, lastRow);
+            SearchOperatorService.NormalizeCompanyNames(ws, companyCol, lastRow);
+            var progress = SearchOperatorService.CountOperatorProgress(sourcePath, ws, eikCol, lastRow);
 
             // save new file to Downloads; overwrite the same operator result on every save
             wb.SaveAs(outPath);
@@ -262,57 +190,6 @@ namespace AddEiksInXlsxFile.Controllers
             });
         }
 
-        private static void NormalizeCompanyNames(ClosedXML.Excel.IXLWorksheet ws, int companyCol, int lastRow)
-        {
-            for (int row = 2; row <= lastRow; row++)
-            {
-                var normalized = StringNormalizationService.NormalizeCompanyName(ws.Cell(row, companyCol).GetString());
-                ws.Cell(row, companyCol).Value = normalized;
-            }
-        }
-
-        private static (int OriginalMissingRows, int ProcessedRows, int UniqueEiksCount) CountOperatorProgress(string sourcePath, ClosedXML.Excel.IXLWorksheet editedWs, int eikCol, int editedLastRow)
-        {
-            using var sourceWb = new ClosedXML.Excel.XLWorkbook(sourcePath);
-            var sourceWs = sourceWb.Worksheets.First();
-            var sourceLastRow = sourceWs.LastRowUsed()?.RowNumber() ?? 0;
-            var lastRow = Math.Min(sourceLastRow, editedLastRow);
-            var uniqueEiks = new HashSet<string>(StringComparer.Ordinal);
-            var originalMissingRows = 0;
-            var processedRows = 0;
-
-            for (int row = 2; row <= lastRow; row++)
-            {
-                var original = sourceWs.Cell(row, eikCol).GetString().Trim();
-                if (!string.Equals(original, "!!!!", StringComparison.Ordinal)) continue;
-
-                originalMissingRows++;
-                var edited = editedWs.Cell(row, eikCol).GetString().Trim();
-                if (string.Equals(edited, "!!!!", StringComparison.Ordinal)) continue;
-
-                processedRows++;
-                if (!string.IsNullOrWhiteSpace(edited))
-                {
-                    uniqueEiks.Add(edited);
-                }
-            }
-
-            return (originalMissingRows, processedRows, uniqueEiks.Count);
-        }
-
-        private static string GetOperatorResultPath(string sourcePath, string? preferredDirectory = null)
-        {
-            var fileName = Path.GetFileName(sourcePath);
-            var outName = Path.GetFileNameWithoutExtension(fileName) + "-operator-result" + Path.GetExtension(fileName);
-            if (!string.IsNullOrEmpty(preferredDirectory))
-            {
-                var preferredPath = Path.Combine(preferredDirectory, outName);
-                if (System.IO.File.Exists(preferredPath)) return preferredPath;
-            }
-
-            var directory = Path.GetDirectoryName(sourcePath) ?? Directory.GetCurrentDirectory();
-            return Path.Combine(directory, outName);
-        }
     }
 
     public class SaveOperatorEditsRequest
