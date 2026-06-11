@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using AddEiksInXlsxFile.Data;
 using AddEiksInXlsxFile.Models;
+using AddEiksInXlsxFile.Services;
 
 namespace AddEiksInXlsxFile.Controllers
 {
@@ -53,38 +54,22 @@ namespace AddEiksInXlsxFile.Controllers
             var periodStats = await operatorStats
                 .Where(s => s.TimestampUtc >= start && s.TimestampUtc <= end)
                 .Where(s => s.UserId == vm.SelectedUserId)
-                .Select(s => new
+                .Select(s => new OperatorStatSnapshot
                 {
-                    s.Id,
-                    s.TimestampUtc,
+                    Id = s.Id,
+                    TimestampUtc = s.TimestampUtc,
                     FileNameOrPath = s.OutputFilePath ?? s.InputFile2 ?? string.Empty,
-                    s.MatchedCount,
-                    s.UniqueEiksCount,
-                    s.TotalRows
+                    MatchedCount = s.MatchedCount,
+                    UniqueEiksCount = s.UniqueEiksCount,
+                    TotalRows = s.TotalRows
                 })
                 .ToListAsync();
 
-            var latestStatsByFile = periodStats
-                .GroupBy(s => Path.GetFileName(s.FileNameOrPath), StringComparer.OrdinalIgnoreCase)
-                .Select(g => g
-                    .OrderByDescending(s => s.TimestampUtc)
-                    .ThenByDescending(s => s.Id)
-                    .First())
-                .ToList();
-
-            vm.ProcessedExclamations = latestStatsByFile.Sum(s => s.MatchedCount);
-            vm.UniqueEiksFromProcessedExclamations = latestStatsByFile.Sum(s => s.UniqueEiksCount);
-            vm.TotalExclamationsAtPeriodStart = latestStatsByFile.Sum(s => s.TotalRows);
-            vm.Files = latestStatsByFile
-                .OrderBy(f => Path.GetFileName(f.FileNameOrPath))
-                .Select(f => new FileStatisticsViewModel
-                {
-                    FileName = Path.GetFileName(f.FileNameOrPath),
-                    ProcessedExclamations = f.MatchedCount,
-                    UniqueEiksFromProcessedExclamations = f.UniqueEiksCount,
-                    TotalExclamationsAtPeriodStart = f.TotalRows
-                })
-                .ToList();
+            var aggregated = StatisticsCalculationService.AggregateLatestByFile(periodStats);
+            vm.ProcessedExclamations = aggregated.ProcessedExclamations;
+            vm.UniqueEiksFromProcessedExclamations = aggregated.UniqueEiksFromProcessedExclamations;
+            vm.TotalExclamationsAtPeriodStart = aggregated.TotalExclamationsAtPeriodStart;
+            vm.Files = aggregated.Files;
 
             return View(vm);
         }

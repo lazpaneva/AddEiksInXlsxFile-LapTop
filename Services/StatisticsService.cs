@@ -18,12 +18,14 @@ namespace AddEiksInXlsxFile.Services
         {
             try
             {
-                if (!IsOperatorResult(result.OutputFileName) && !IsOperatorResult(result.OutputFilePath))
+                if (!StatisticsCalculationService.IsOperatorResult(result.OutputFileName) &&
+                    !StatisticsCalculationService.IsOperatorResult(result.OutputFilePath))
                 {
                     return;
                 }
 
-                var outputFileName = GetOperatorResultFileName(result.OutputFileName) ?? GetOperatorResultFileName(result.OutputFilePath);
+                var outputFileName = StatisticsCalculationService.GetOperatorResultFileName(result.OutputFileName)
+                    ?? StatisticsCalculationService.GetOperatorResultFileName(result.OutputFilePath);
                 if (string.IsNullOrEmpty(outputFileName))
                 {
                     return;
@@ -57,7 +59,7 @@ namespace AddEiksInXlsxFile.Services
                 stat.TotalRows = result.TotalRows;
                 stat.UniqueEiksCount = result.UniqueEiksCount;
                 stat.MatchedCount = result.MatchedCount;
-                stat.SuccessRate = result.TotalRows == 0 ? 0 : (decimal)result.MatchedCount / result.TotalRows;
+                stat.SuccessRate = StatisticsCalculationService.CalculateSuccessRate(result.TotalRows, result.MatchedCount);
                 stat.ErrorMessage = result.ErrorMessage;
 
                 await _db.SaveChangesAsync();
@@ -66,27 +68,6 @@ namespace AddEiksInXlsxFile.Services
             {
                 // swallow exceptions: statistics are best-effort
             }
-        }
-
-        private static bool IsOperatorResult(string? fileNameOrPath)
-        {
-            if (string.IsNullOrWhiteSpace(fileNameOrPath))
-            {
-                return false;
-            }
-
-            var fileName = System.IO.Path.GetFileName(fileNameOrPath);
-            return fileName.EndsWith("-operator-result.xlsx", System.StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static string? GetOperatorResultFileName(string? fileNameOrPath)
-        {
-            if (!IsOperatorResult(fileNameOrPath))
-            {
-                return null;
-            }
-
-            return System.IO.Path.GetFileName(fileNameOrPath);
         }
     }
 }
