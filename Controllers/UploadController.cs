@@ -6,6 +6,10 @@ namespace AddEiksInXlsxFile.Controllers
 {
     using Microsoft.AspNetCore.Authorization;
 
+    /// <summary>
+    /// Контролер за качване и управление на XLSX файлове. Отговаря за приемане
+    /// на входни файлове, валидация и задействане на обработка/експорт.
+    /// </summary>
     [Authorize]
     public class UploadController : Controller
     {
@@ -15,6 +19,9 @@ namespace AddEiksInXlsxFile.Controllers
         private readonly SearchService _searchService;
         private readonly string[] _accepted = new[] { ".xlsx" };
 
+        /// <summary>
+        /// Инициализира нов екземпляр на <see cref="UploadController"/> с необходимите услуги.
+        /// </summary>
         public UploadController(XlsxService xlsxService, XlsxProcessingService processingService, StatisticsService statisticsService, SearchService searchService)
         {
             _xlsxService = xlsxService;
@@ -24,12 +31,18 @@ namespace AddEiksInXlsxFile.Controllers
         }
 
         [HttpGet]
+        /// <summary>
+        /// Първичен изглед за качване на файлове.
+        /// </summary>
         public IActionResult Index()
         {
             return View();
         }
 
         [HttpGet]
+        /// <summary>
+        /// Пренасочва към контролера за търсене (Search).
+        /// </summary>
         public IActionResult Search()
         {
             return RedirectToAction("Index", "Search");
@@ -38,6 +51,10 @@ namespace AddEiksInXlsxFile.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [RequestSizeLimit(50 * 1024 * 1024)]
+        /// <summary>
+        /// Обработва POST заявката за качване/стартиране на обработка.
+        /// Приема две опционални файлови полета и допълнителни параметри за колони.
+        /// </summary>
         public async Task<IActionResult> Index(IFormFile? file1, IFormFile? file2, int? file1Col = null, int? file2Col = null, string? submitButton = null, string? existingFile1 = null, string? existingFile2 = null)
         {
             // Allow processing to start when files were previously uploaded and their names are posted back
@@ -91,6 +108,7 @@ namespace AddEiksInXlsxFile.Controllers
             if (!ModelState.IsValid)
             {
                 // If this is an AJAX upload, return validation errors as JSON
+                // (non-obvious: return JSON for client-side upload flow)
                 if (Request.Headers.ContainsKey("X-Requested-With") && Request.Headers["X-Requested-With"] == "XMLHttpRequest")
                 {
                     var errors = ViewData.ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToArray();
@@ -104,6 +122,7 @@ namespace AddEiksInXlsxFile.Controllers
             {
                 if (!string.IsNullOrEmpty(result.File1Name) && !string.IsNullOrEmpty(result.File2Name))
                 {
+                    // Complex operation: run processing and record statistics. Wrap in try/catch to preserve UX.
                     try
                     {
                         var procResult = _processingService.ProcessAndSort(result.File1Name, result.File2Name, file1ColValue, file2ColValue);

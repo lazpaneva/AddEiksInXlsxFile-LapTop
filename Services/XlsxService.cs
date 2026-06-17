@@ -4,10 +4,17 @@ using Microsoft.AspNetCore.Http;
 
 namespace AddEiksInXlsxFile.Services
 {
+    /// <summary>
+    /// Помощна услуга за записване и локализиране на временни XLSX файлове
+    /// в `wwwroot/uploads` и управление на безопасни имена на файлове.
+    /// </summary>
     public class XlsxService
     {
         private readonly string _uploadsPath;
 
+        /// <summary>
+        /// Инициализира услугата и почиства временните .xlsx файлове при стартиране.
+        /// </summary>
         public XlsxService()
         {
             _uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
@@ -15,6 +22,7 @@ namespace AddEiksInXlsxFile.Services
             // Clean up existing .xlsx files on startup
             try
             {
+                // Non-obvious: remove stale uploads to avoid accumulating files
                 var files = Directory.GetFiles(_uploadsPath, "*.xlsx");
                 foreach (var f in files)
                 {
@@ -27,6 +35,9 @@ namespace AddEiksInXlsxFile.Services
             }
         }
 
+        /// <summary>
+        /// Записва входен `IFormFile` като временен файл и връща името за сваляне.
+        /// </summary>
         public async Task<string> SaveTempFileAsync(IFormFile file)
         {
             var originalName = Path.GetFileName(file.FileName) ?? "upload.xlsx";
@@ -53,6 +64,10 @@ namespace AddEiksInXlsxFile.Services
             return Path.GetFileName(filePath) ?? safeName; // return stored file name for download link
         }
 
+        /// <summary>
+        /// Прави подаденото име безопасно за файловата система, замествайки
+        /// невалидни символи и премахвайки празни места.
+        /// </summary>
         private static string MakeSafeFileName(string name)
         {
             var invalids = Path.GetInvalidFileNameChars();
@@ -62,6 +77,9 @@ namespace AddEiksInXlsxFile.Services
             return cleaned;
         }
 
+        /// <summary>
+        /// Връща пълния път към временния файл за дадено име.
+        /// </summary>
         public string GetFilePath(string fileName)
         {
             return Path.Combine(_uploadsPath, fileName);

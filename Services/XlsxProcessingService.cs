@@ -4,6 +4,10 @@ using ClosedXML.Excel;
 
 namespace AddEiksInXlsxFile.Services
 {
+    /// <summary>
+    /// Основна бизнес-логика за съпоставяне на имена и попълване на EIK
+    /// от един XLSX файл в друг, сортирайки резултата и създавайки изходен файл.
+    /// </summary>
     public class XlsxProcessingService
     {
         private readonly XlsxService _xlsxService;
@@ -13,6 +17,11 @@ namespace AddEiksInXlsxFile.Services
             _xlsxService = xlsxService;
         }
 
+        /// <summary>
+        /// Обработва два входни файла: събира EIK стойности от `file1Name`,
+        /// попълва колона EIK в `file2Name`, сортира редовете и записва резултат.
+        /// Връща <see cref="ProcessResult"/> с метрики и път до изходния файл.
+        /// </summary>
         public ProcessResult ProcessAndSort(string file1Name, string file2Name, int file1CompanyCol, int file2CompanyCol)
         {
             var file1Path = _xlsxService.GetFilePath(file1Name);
@@ -30,6 +39,7 @@ namespace AddEiksInXlsxFile.Services
             var allEiks = new HashSet<string>();
 
             var lastRow1 = ws1.LastRowUsed()?.RowNumber() ?? 0;
+            // Чете референтния файл ред по ред и агрегира EIK стойности по нормализирано име.
             for (int r = 2; r <= lastRow1; r++)
             {
                 var name = ws1.Cell(r, file1CompanyCol).GetString();
@@ -91,6 +101,7 @@ namespace AddEiksInXlsxFile.Services
 
             int outRow = 2;
             int matchedCount = 0;
+            // За всеки сортиран ред: копира оригиналния ред в новия лист и определя EIK за него.
             foreach (var (norm, origRow) in dataRows)
             {
                 // Copy original row into new sheet while inserting the EIK column.
@@ -154,6 +165,8 @@ namespace AddEiksInXlsxFile.Services
                 }
             }
 
+            // Опитваме няколко възможни папки за запис на резултата, вкл. директорията от името,
+            // Downloads и fallback към uploads. Това гарантира по-голяма вероятност за успешен запис.
             try
             {
                 var dirFromFile2Name = Path.GetDirectoryName(file2Name);
@@ -229,6 +242,10 @@ namespace AddEiksInXlsxFile.Services
             };
         }
 
+        /// <summary>
+        /// Опитва да открие колоната с EIK/UID по заглавния ред; ако не успее,
+        /// връща колоната непосредствено вдясно от колоната с фирмено име.
+        /// </summary>
         private int DetectEikColumn(IXLWorksheet ws, int companyCol)
         {
             // Try to detect EIK column by header keywords in row 1
@@ -249,6 +266,10 @@ namespace AddEiksInXlsxFile.Services
             return companyCol + 1;
         }
 
+        /// <summary>
+        /// Копира източников ред в целевия лист, като се вмъква празна колона
+        /// на позиция <paramref name="insertedCol"/> за EIK стойността.
+        /// </summary>
         private static void CopyRowWithInsertedColumn(IXLWorksheet source, IXLWorksheet target, int sourceRow, int targetRow, int lastCol, int insertedCol)
         {
             target.Row(targetRow).Height = source.Row(sourceRow).Height;
@@ -260,6 +281,9 @@ namespace AddEiksInXlsxFile.Services
             }
         }
 
+        /// <summary>
+        /// Генерира безопасно име за резултатния файл, базирано на оригиналното.
+        /// </summary>
         private static string MakeResultFileName(string original)
         {
             var nameWithoutExt = Path.GetFileNameWithoutExtension(original);
