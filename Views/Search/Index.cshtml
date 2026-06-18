@@ -72,7 +72,8 @@
                         <tbody>
                             @foreach (var row in Model.Rows)
                             {
-                                var searchTerm = Uri.EscapeDataString("\"" + row.CompanyName + "\"");
+                                var searchTerm = Uri.EscapeDataString(row.CompanyName);
+                                //var searchTerm = Uri.EscapeDataString("\"" + row.CompanyName + "\"");
                                 var url = "https://web.apis.bg/srch.php?dt=38&sr=" + searchTerm;
                                 var detailsId = $"row-details-{row.RowNumber}";
 
